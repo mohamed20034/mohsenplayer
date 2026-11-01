@@ -1,3 +1,10 @@
 {
-  "tracks": []
+  "tracks": [
+    {
+      "title": "Papa Told Me (Official Music Video)",
+      "artist": "4N The Human",
+      "album": "Singles",
+      "src": "music/4N-The-Human---Papa-Told-Me-Official-Music-Video.mp3"
+    }
+  ]
 }

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#121212">
+<title>MOHSEN PLAYER</title>
+<style>
+:root{color-scheme:dark;--bg:#000;--panel:#121212;--panel2:#181818;--hover:#242424;--muted:#a7a7a7;--white:#fff;--green:#1ed760;--line:#2a2a2a}
+*{box-sizing:border-box}body{margin:0;background:#000;color:var(--white);font-family:Arial,Helvetica,sans-serif;min-height:100vh}button,input{font:inherit}button{cursor:pointer;color:inherit}
+.app{min-height:100vh;padding:8px 8px 100px;display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:1fr;gap:8px}
+.sidebar{background:#121212;border-radius:9px;padding:22px 14px;display:flex;flex-direction:column;gap:24px;min-height:calc(100vh - 116px)}
+.logo{font-size:18px;font-weight:900;letter-spacing:.11em;padding:0 10px}.logo span{color:var(--green)}
+.nav{display:grid;gap:15px}.nav-item{display:flex;align-items:center;gap:14px;color:var(--muted);font-weight:700;font-size:13px;padding:4px 10px}.nav-item.active,.nav-item:hover{color:#fff}.nav-icon{font-size:20px;width:22px;text-align:center}
+.library-head{display:flex;justify-content:space-between;align-items:center;padding:0 9px;color:var(--muted);font-size:13px;font-weight:700}.library-head button{border:0;background:none;color:var(--muted);font-size:22px}
+.playlist-link{padding:10px;border-radius:6px;color:#ddd;font-size:12px;line-height:1.5}.playlist-link:hover{background:#1d1d1d}.playlist-link small{display:block;color:var(--muted);margin-top:3px}
+.main{background:linear-gradient(180deg,#263d2e 0,#1c2b22 230px,#121212 440px);border-radius:9px;overflow:hidden;min-width:0}
+.topbar{height:64px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;background:#00000025}
+.arrows{display:flex;gap:8px}.circle{width:32px;height:32px;border-radius:50%;border:0;background:#0009;color:#ddd;font-size:19px}
+.profile{border:0;border-radius:99px;background:#080808;color:#fff;padding:6px 12px 6px 6px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:8px}.avatar{width:24px;height:24px;border-radius:50%;background:var(--green);color:#071509;display:grid;place-items:center;font-weight:900}
+.content{padding:16px 26px 34px}.hero{display:flex;align-items:end;gap:22px;margin:8px 0 26px}.hero-art{width:174px;height:174px;flex:none;border-radius:5px;background:linear-gradient(140deg,#d5ff73,#6d8e30 55%,#182014);box-shadow:0 8px 30px #0006;display:grid;place-items:center;color:#10180a;font-size:65px;font-weight:1000;letter-spacing:-.1em}.hero-copy small{font-size:11px;font-weight:700}.hero-copy h1{font-size:clamp(35px,5vw,68px);letter-spacing:-.06em;line-height:.95;margin:12px 0}.hero-copy p{color:#e0e7df;font-size:12px;margin:0}.hero-copy .muted{color:#c1c9c1;margin-top:9px}
+.toolbar{display:flex;align-items:center;gap:18px;margin:10px 0 20px}.big-play{width:54px;height:54px;border-radius:50%;border:0;background:var(--green);color:#000;font-size:22px;padding-left:5px}.big-play:hover{transform:scale(1.04)}.tool{border:0;background:none;color:#aaa;font-size:23px}.tool.active{color:var(--green)}
+.list-head,.song{display:grid;grid-template-columns:34px minmax(130px,1.5fr) minmax(80px,1fr) 80px;gap:12px;align-items:center;padding:9px 12px}.list-head{border-bottom:1px solid #ffffff20;color:var(--muted);font-size:11px;margin-bottom:8px}.song{border-radius:5px;color:#ddd;font-size:12px;cursor:pointer}.song:hover{background:#ffffff12}.song.current{background:#ffffff18}.num{color:var(--muted);text-align:center}.song-title{display:flex;align-items:center;gap:11px;min-width:0}.song-cover{width:40px;height:40px;border-radius:3px;object-fit:cover;background:#303030;display:grid;place-items:center;color:var(--green);font-size:18px;flex:none}.song-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.song-artist{font-size:11px;color:var(--muted);margin-top:4px}.album,.length{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.length{text-align:right;font-variant-numeric:tabular-nums}
+.empty{padding:40px 15px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7}.empty b{color:#fff}.error{color:#ffb4b4}
+.player{position:fixed;z-index:5;left:0;right:0;bottom:0;height:88px;background:#181818;border-top:1px solid #292929;display:grid;grid-template-columns:minmax(180px,1fr) minmax(260px,1.3fr) minmax(180px,1fr);gap:20px;align-items:center;padding:0 18px}
+.now{display:flex;align-items:center;gap:12px;min-width:0}.now-cover{width:54px;height:54px;object-fit:cover;border-radius:4px;background:#303030;display:grid;place-items:center;color:var(--green);flex:none}.now-meta{min-width:0}.now-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.now-artist{font-size:10px;color:var(--muted);margin-top:5px}.like{border:0;background:none;color:var(--green);font-size:17px}
+.center{min-width:0}.controls{display:flex;justify-content:center;align-items:center;gap:17px}.ctrl{border:0;background:none;color:#b3b3b3;font-size:17px;padding:2px}.ctrl:hover,.ctrl.on{color:var(--green)}.play{width:32px;height:32px;border:0;border-radius:50%;background:#fff;color:#000;font-size:14px}.seekline{display:flex;align-items:center;gap:9px;margin-top:9px}.time{font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums}.range{appearance:none;height:4px;background:#5e5e5e;border-radius:9px;outline:none;width:100%;cursor:pointer}.range::-webkit-slider-thumb{appearance:none;width:11px;height:11px;border-radius:50%;background:#fff}.range:hover::-webkit-slider-thumb{background:var(--green)}
+.extras{display:flex;justify-content:flex-end;align-items:center;gap:12px;color:var(--muted)}.volume{width:90px}.mobile-menu{display:none}
+@media(max-width:850px){.app{grid-template-columns:75px minmax(0,1fr)}.sidebar{padding:20px 8px;align-items:center}.logo{font-size:0;padding:0}.logo:after{content:'M.';font-size:20px;color:var(--green)}.nav-item{justify-content:center;padding:5px}.nav-label,.library-head span,.library-head button,.playlist-link{display:none}.library-head{justify-content:center}.player{grid-template-columns:minmax(120px,1fr) minmax(220px,1.3fr);gap:12px}.extras{display:none}}
+@media(max-width:580px){.app{display:block;padding:0 0 95px}.sidebar{display:none}.main{border-radius:0;min-height:100vh}.topbar{height:55px;padding:0 16px}.content{padding:15px 15px 25px}.hero{gap:15px;margin:12px 0 20px}.hero-art{width:112px;height:112px;font-size:43px}.hero-copy h1{font-size:35px;margin:8px 0}.hero-copy p{font-size:10px}.hero-copy .muted{display:none}.list-head,.song{grid-template-columns:25px minmax(0,1fr) 55px;gap:7px;padding:8px 5px}.album{display:none}.song-cover{width:36px;height:36px}.player{height:84px;padding:7px 10px;grid-template-columns:110px minmax(0,1fr);gap:8px}.now-cover{width:39px;height:39px}.now{gap:7px}.now-name{font-size:10px}.now-artist{font-size:9px}.like{display:none}.controls{gap:12px}.ctrl{font-size:14px}.play{width:29px;height:29px}.time{font-size:8px}.seekline{gap:5px;margin-top:6px}.toolbar{gap:13px}.big-play{width:48px;height:48px}}
+</style>
+</head>
+<body>
+<div class="app">
+ <aside class="sidebar">
+  <div class="logo">MOHSEN<span>.</span>PLAYER</div>
+  <nav class="nav">
+   <div class="nav-item active"><span class="nav-icon">⌂</span><span class="nav-label">Home</span></div>
+   <div class="nav-item"><span class="nav-icon">⌕</span><span class="nav-label">Search</span></div>
+  </nav>
+  <div class="library-head"><span>Your Library</span><button title="Your library">＋</button></div>
+  <div class="playlist-link">♡ Your Liked Songs<small>Playlist · MOHSEN</small></div>
+  <div class="playlist-link">♫ All Tracks<small id="sideCount">Loading library...</small></div>
+ </aside>
+ <main class="main">
+  <div class="topbar"><div class="arrows"><button class="circle" onclick="history.back()">‹</button><button class="circle" onclick="history.forward()">›</button></div><button class="profile"><span class="avatar">M</span> MOHSEN</button></div>
+  <div class="content">
+   <section class="hero">
+    <div class="hero-art">M.</div>
+    <div class="hero-copy"><small>PUBLIC MUSIC LIBRARY</small><h1>MOHSEN<br>PLAYER</h1><p>Your music. Your space.</p><p class="muted" id="heroCount">Loading tracks...</p></div>
+   </section>
+   <div class="toolbar"><button class="big-play" id="bigPlay" title="Play">▶</button><button class="tool" id="shuffle" title="Shuffle">⤨</button><button class="tool" id="repeat" title="Repeat">↻</button></div>
+   <div class="list-head"><span>#</span><span>Title</span><span class="album">Album / Collection</span><span class="length">◷</span></div>
+   <div id="songs"><div class="empty">Loading your music library...</div></div>
+  </div>
+ </main>
+</div>
+<footer class="player">
+ <div class="now"><div class="now-cover" id="nowCover">♫</div><div class="now-meta"><div class="now-name" id="nowName">Choose a track</div><div class="now-artist" id="nowArtist">MOHSEN PLAYER</div></div><button class="like" id="like" title="Like">♡</button></div>
+ <div class="center"><div class="controls"><button class="ctrl" id="shuffleSmall" title="Shuffle">⤨</button><button class="ctrl" id="prev" title="Previous">|◀</button><button class="play" id="play" title="Play">▶</button><button class="ctrl" id="next" title="Next">▶|</button><button class="ctrl" id="repeatSmall" title="Repeat">↻</button></div><div class="seekline"><span class="time" id="currentTime">0:00</span><input class="range" id="seek" type="range" min="0" max="1000" value="0"><span class="time" id="duration">0:00</span></div></div>
+ <div class="extras"><span>♫</span><input class="range volume" id="volume" type="range" min="0" max="1" step=".01" value=".8"></div>
+</footer>
+<audio id="audio" preload="metadata"></audio>
+<script>
+(()=>{
+const $=id=>document.getElementById(id),audio=$('audio');
+let tracks=[],current=-1,shuffle=false,repeat=false,liked=new Set();
+const fmt=s=>Number.isFinite(s)?Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'):'0:00';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function showError(msg){$('songs').innerHTML='<div class="empty error">'+msg+'</div>'}
+async function loadLibrary(){
+ try{
+  const r=await fetch('./tracks.json',{cache:'no-store'});
+  if(!r.ok)throw new Error('Could not load tracks.json (HTTP '+r.status+').');
+  const data=await r.json();
+  tracks=(data.tracks||[]).filter(t=>t.src).map(t=>({...t,src:new URL(t.src,document.baseURI).href}));
+  render();
+ }catch(e){showError('Could not load your music catalogue.<br>Check that <b>tracks.json</b> is in the repository root and contains valid JSON.<br><small>'+esc(e.message)+'</small>');}
+}
+function coverHTML(t,cls='song-cover'){return t.cover?`<img class="${cls}" src="${esc(new URL(t.cover,document.baseURI).href)}" alt="">`:`<div class="${cls}">♫</div>`}
+function render(){
+ $('sideCount').textContent=tracks.length+' tracks';$('heroCount').textContent=tracks.length+' songs · Public playlist';
+ if(!tracks.length){$('songs').innerHTML='<div class="empty">No tracks added yet.<br>Add MP3 files to <b>music/</b> and list them in <b>tracks.json</b>.</div>';return}
+ $('songs').innerHTML=tracks.map((t,i)=>`<div class="song ${i===current?'current':''}" data-i="${i}"><span class="num">${i===current&&!audio.paused?'♫':String(i+1).padStart(2,'0')}</span><div class="song-title">${coverHTML(t)}<div style="min-width:0"><div class="song-name">${esc(t.title||'Untitled')}</div><div class="song-artist">${esc(t.artist||'Unknown artist')}</div></div></div><span class="album">${esc(t.album||'Singles')}</span><span class="length" data-duration="${i}">--:--</span></div>`).join('');
+ document.querySelectorAll('.song').forEach(el=>el.addEventListener('click',()=>playAt(Number(el.dataset.i))));
+ tracks.forEach((t,i)=>{const a=new Audio();a.preload='metadata';a.src=t.src;a.addEventListener('loadedmetadata',()=>{const el=document.querySelector(`[data-duration="${i}"]`);if(el)el.textContent=fmt(a.duration)},{once:true})});
+}
+function setNow(){
+ const t=tracks[current];$('nowName').textContent=t?.title||'Choose a track';$('nowArtist').textContent=t?.artist||'MOHSEN PLAYER';
+ $('nowCover').innerHTML=t?.cover?`<img class="now-cover" src="${esc(new URL(t.cover,document.baseURI).href)}">`:'♫';
+ $('play').textContent=audio.paused?'▶':'Ⅱ';$('bigPlay').textContent=audio.paused?'▶':'Ⅱ';render();
+}
+function playAt(i){if(i<0||i>=tracks.length)return;current=i;audio.src=tracks[i].src;audio.play().then(setNow).catch(()=>{setNow();showError('Playback failed. Check the audio file path and format in tracks.json.')});setNow()}
+function next(){if(!tracks.length)return;let i;if(shuffle&&tracks.length>1){do{i=Math.floor(Math.random()*tracks.length)}while(i===current)}else i=(current+1)%tracks.length;playAt(i)}
+function prev(){if(audio.currentTime>3){audio.currentTime=0;return}playAt((current-1+tracks.length)%tracks.length)}
+function togglePlay(){if(current<0){if(tracks.length)playAt(0);return}if(audio.paused)audio.play().then(setNow);else audio.pause();setNow()}
+function toggleShuffle(){shuffle=!shuffle;['shuffle','shuffleSmall'].forEach(id=>$(id).classList.toggle('active',shuffle))}
+function toggleRepeat(){repeat=!repeat;['repeat','repeatSmall'].forEach(id=>$(id).classList.toggle('active',repeat))}
+$('play').onclick=togglePlay;$('bigPlay').onclick=togglePlay;$('next').onclick=next;$('prev').onclick=prev;
+$('shuffle').onclick=toggleShuffle;$('shuffleSmall').onclick=toggleShuffle;$('repeat').onclick=toggleRepeat;$('repeatSmall').onclick=toggleRepeat;
+$('like').onclick=()=>{if(current<0)return;liked.has(current)?liked.delete(current):liked.add(current);$('like').textContent=liked.has(current)?'♥':'♡'};
+$('volume').oninput=e=>audio.volume=Number(e.target.value);audio.volume=.8;
+$('seek').oninput=e=>{if(Number.isFinite(audio.duration))audio.currentTime=Number(e.target.value)/1000*audio.duration};
+audio.ontimeupdate=()=>{$('currentTime').textContent=fmt(audio.currentTime);$('duration').textContent=fmt(audio.duration);$('seek').value=audio.duration?audio.currentTime/audio.duration*1000:0};
+audio.onplay=setNow;audio.onpause=setNow;audio.onended=()=>repeat?(audio.currentTime=0,audio.play()):next();
+document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;if(e.code==='Space'){e.preventDefault();togglePlay()}else if(e.code==='ArrowRight'&&current>=0)audio.currentTime=Math.min(audio.duration||0,audio.currentTime+5);else if(e.code==='ArrowLeft'&&current>=0)audio.currentTime=Math.max(0,audio.currentTime-5)});
+loadLibrary();
+})();
+</script>
+</body>
+</html>

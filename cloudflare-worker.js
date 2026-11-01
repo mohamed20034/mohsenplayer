@@ -32,11 +32,10 @@ function secureEqual(a, b) {
   return diff === 0;
 }
 function cleanName(value) {
-  return String(value || "track").normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+  return String(value || "track").normalize("NFC")
     .replace(/\.[^.]+$/, "")
-    .replace(/[^a-zA-Z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "").slice(0, 80) || "track";
+    .replace(/[^\p{L}\p{N}_-]+/gu, "-")
+    .replace(/^-+|-+$/g, "").slice(0, 100) || "track";
 }
 function decodeBase64Text(value) {
   const binary = atob(String(value || "").replace(/\s/g, ""));

@@ -67,19 +67,21 @@ async function github(path, token, options = {}) {
       ...(fetchOptions.headers || {})
     }
   });
-  let data = {};
   let responseText = "";
-  try { data = await response.json(); } catch (_) {
-    try { responseText = await response.text(); } catch (__) {}
-  }
+  let data = {};
+  try { responseText = await response.text(); } catch (_) {}
+  try { data = responseText ? JSON.parse(responseText) : {}; } catch (_) {}
   if (!response.ok) {
-    const error = new Error(data.message || responseText || ("GitHub API returned " + response.status));
+    const error = new Error(data.message || responseText.slice(0, 700) || ("GitHub API returned " + response.status));
     error.status = response.status;
     error.githubDetails = {
+      status: response.status,
       acceptedPermissions: response.headers.get("X-Accepted-GitHub-Permissions"),
       requestId: response.headers.get("X-GitHub-Request-Id"),
       rateLimitRemaining: response.headers.get("X-RateLimit-Remaining"),
-      documentationUrl: data.documentation_url || null
+      rateLimitReset: response.headers.get("X-RateLimit-Reset"),
+      documentationUrl: data.documentation_url || null,
+      body: responseText.slice(0, 700)
     };
     throw error;
   }

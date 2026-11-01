@@ -103,13 +103,31 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     if (url.pathname === "/health" && request.method === "GET") {
-      return new Response(JSON.stringify({ ok: true, service: "mohsen-player-uploader", version: "diagnostic-v4" }), {
+      return new Response(JSON.stringify({ ok: true, service: "mohsen-player-uploader", version: "diagnostic-v5" }), {
         headers: { ...corsHeaders(), "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
       });
     }
-    if (url.pathname !== "/upload" || request.method !== "POST") return json({ error: "Not found." }, 404);
-
     const suppliedKey = request.headers.get("X-Upload-Key") || "";
+    if (url.pathname === "/diagnostics" && request.method === "GET") {
+      if (!env.UPLOAD_KEY || !secureEqual(suppliedKey, env.UPLOAD_KEY)) return json({ error: "Upload key is incorrect." }, 401);
+      if (!env.GH_TOKEN) return json({ error: "Worker is missing the GH_TOKEN secret." }, 500);
+      try {
+        const file = await getContent("tracks.json", env.GH_TOKEN);
+        if (!file) return json({ ok: false, stage: "reading_tracks_json", error: "GitHub token could not find tracks.json in the configured repository." }, 404);
+        return json({ ok: true, version: "diagnostic-v5", repository: OWNER + "/" + REPO, permissionCheck: "Contents read succeeded", tracksJsonSha: file.sha });
+      } catch (error) {
+        return json({
+          ok: false,
+          error: error.message || "GitHub permission check failed.",
+          stage: "reading_tracks_json",
+          githubDetails: error.githubDetails || null
+        }, error.status && error.status < 500 ? error.status : 500);
+      }
+    }
+
+    if (url.pathname !== "/upload" || request.method !== "POST") return json({ error: "Not found." }, 404);
+    if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
+
     if (!env.UPLOAD_KEY || !secureEqual(suppliedKey, env.UPLOAD_KEY)) return json({ error: "Upload key is incorrect." }, 401);
     if (!env.GH_TOKEN) return json({ error: "Worker is missing the GH_TOKEN secret." }, 500);
 

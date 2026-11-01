@@ -68,10 +68,19 @@ async function github(path, token, options = {}) {
     }
   });
   let data = {};
-  try { data = await response.json(); } catch (_) {}
+  let responseText = "";
+  try { data = await response.json(); } catch (_) {
+    try { responseText = await response.text(); } catch (__) {}
+  }
   if (!response.ok) {
-    const error = new Error(data.message || ("GitHub API returned " + response.status));
+    const error = new Error(data.message || responseText || ("GitHub API returned " + response.status));
     error.status = response.status;
+    error.githubDetails = {
+      acceptedPermissions: response.headers.get("X-Accepted-GitHub-Permissions"),
+      requestId: response.headers.get("X-GitHub-Request-Id"),
+      rateLimitRemaining: response.headers.get("X-RateLimit-Remaining"),
+      documentationUrl: data.documentation_url || null
+    };
     throw error;
   }
   return data;
@@ -122,6 +131,7 @@ export default {
 
     const base = cleanName(originalName);
     let filePath = "music/" + base + extension;
+    let stage = "checking_existing_filename";
     try {
       let collision = await getContent(filePath, env.GH_TOKEN);
       let suffix = 2;
@@ -132,17 +142,20 @@ export default {
       }
       if (collision) return json({ error: "Could not find a unique filename. Rename the file and retry." }, 409);
 
+      stage = "uploading_audio_file";
       await github(filePath, env.GH_TOKEN, {
         method: "PUT",
         body: JSON.stringify({ message: "Add audio track: " + title, branch: BRANCH, content: fileBase64 })
       });
 
+      stage = "reading_tracks_json";
       const catalogueFile = await getContent("tracks.json", env.GH_TOKEN);
       if (!catalogueFile) throw new Error("Audio was uploaded, but tracks.json was not found.");
       const catalogue = JSON.parse(decodeBase64Text(catalogueFile.content));
       if (!Array.isArray(catalogue.tracks)) catalogue.tracks = [];
       catalogue.tracks.push({ title, artist, album, src: filePath });
 
+      stage = "updating_tracks_json";
       await github("tracks.json", env.GH_TOKEN, {
         method: "PUT",
         body: JSON.stringify({
@@ -156,7 +169,9 @@ export default {
     } catch (error) {
       return json({
         error: error.message || "Upload failed.",
-        audioMayAlreadyBeUploaded: true
+        stage,
+        githubDetails: error.githubDetails || null,
+        audioMayAlreadyBeUploaded: stage === "reading_tracks_json" || stage === "updating_tracks_json"
       }, error.status && error.status < 500 ? error.status : 500);
     }
   }

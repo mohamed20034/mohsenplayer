@@ -103,7 +103,7 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     if (url.pathname === "/health" && request.method === "GET") {
-      return new Response(JSON.stringify({ ok: true, service: "mohsen-player-uploader", version: "diagnostic-v3" }), {
+      return new Response(JSON.stringify({ ok: true, service: "mohsen-player-uploader", version: "diagnostic-v4" }), {
         headers: { ...corsHeaders(), "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
       });
     }

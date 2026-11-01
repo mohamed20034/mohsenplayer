@@ -54,6 +54,8 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 
 <section id="upload" class="hidden">
 <div class="note"><b>Worker connected.</b> Select several audio files at once. We'll read embedded MP3 tags when available, otherwise detect artist and title from filenames. You can edit every item before uploading.</div>
+<button class="secondary full" id="testGithub" type="button">TEST GITHUB PERMISSIONS</button>
+<div class="small" id="githubTestResult"></div>
 <label for="audioFiles">AUDIO FILES · SELECT MULTIPLE · MAX 20 MB EACH</label>
 <div class="dropzone">
 <input id="audioFiles" type="file" multiple accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.webm">
@@ -249,6 +251,32 @@ $('disconnectBtn').addEventListener('click',()=>{
  $('upload').classList.add('hidden');$('settings').classList.remove('hidden');
  $('queue').innerHTML='';$('audioFiles').value='';
  renderQueue();status('Disconnected. The upload key has been cleared from this page.');
+});
+$('testGithub').addEventListener('click',async()=>{
+ const button=$('testGithub'),resultBox=$('githubTestResult');
+ button.disabled=true;button.textContent='TESTING...';resultBox.textContent='Checking whether the Worker can read tracks.json from GitHub...';
+ try{
+  const response=await fetch(workerUrl+'/diagnostics',{method:'GET',headers:{'X-Upload-Key':uploadKey}});
+  let result={};try{result=await response.json()}catch(_){}
+  if(!response.ok||!result.ok){
+   const details=result.githubDetails||{};
+   const lines=[
+    result.error||('HTTP '+response.status),
+    result.stage?'Stage: '+result.stage:'',
+    details.acceptedPermissions?'GitHub requires: '+details.acceptedPermissions:'',
+    details.requestId?'Request ID: '+details.requestId:'',
+    details.body?'GitHub response: '+details.body:''
+   ].filter(Boolean);
+   resultBox.textContent=lines.join(' | ');
+   resultBox.style.color='#ff9c9c';
+  }else{
+   resultBox.textContent='SUCCESS — '+result.repository+' · '+result.permissionCheck+' · Worker '+result.version;
+   resultBox.style.color='#1ed760';
+  }
+ }catch(error){
+  resultBox.textContent='Diagnostic request failed: '+(error.message||'Network error');
+  resultBox.style.color='#ff9c9c';
+ }finally{button.disabled=false;button.textContent='TEST GITHUB PERMISSIONS';}
 });
 $('audioFiles').addEventListener('change',async event=>{
  const files=Array.from(event.target.files||[]);

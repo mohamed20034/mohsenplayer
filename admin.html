@@ -4,45 +4,71 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121212">
 <title>MOHSEN PLAYER · Admin</title>
 <style>
-:root{color-scheme:dark;--green:#1ed760;--muted:#aaa}*{box-sizing:border-box}
-body{margin:0;background:#090909;color:#fff;font:14px Arial,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px}
-.card{width:min(100%,560px);background:#181818;border:1px solid #303030;border-radius:16px;padding:25px}
+:root{color-scheme:dark;--green:#1ed760;--muted:#aaa;--panel:#181818;--line:#333}
+*{box-sizing:border-box}
+body{margin:0;background:#090909;color:#fff;font:14px Arial,Helvetica,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px}
+.card{width:min(100%,760px);background:var(--panel);border:1px solid #303030;border-radius:16px;padding:25px}
 .brand{font-weight:900;letter-spacing:.12em}.brand span{color:var(--green)}
 h1{font-size:27px;margin:24px 0 8px}.muted{color:var(--muted);line-height:1.6;font-size:12px}
-label{display:block;margin:15px 0 6px;color:#ccc;font-size:11px;font-weight:700}
-input{width:100%;padding:12px;border:1px solid #444;border-radius:8px;background:#242424;color:white;outline:none}
-input:focus{border-color:var(--green)}
+label{display:block;margin:12px 0 6px;color:#ccc;font-size:11px;font-weight:700}
+input{font:inherit;width:100%;padding:11px;border:1px solid #444;border-radius:8px;background:#242424;color:#fff;outline:none}
+input:focus{border-color:var(--green)}input[type=file]{padding:11px}
 button{border:0;border-radius:99px;background:var(--green);color:#071509;font-weight:900;padding:12px 18px;cursor:pointer;margin-top:12px}
-button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#333;color:#fff}.inline{padding:8px 12px;font-size:11px;margin:0 0 0 8px}
-.hidden{display:none!important}.status{margin-top:13px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#333;color:#fff}
+.inline{padding:8px 12px;font-size:11px;margin:0}.hidden{display:none!important}
+.status{margin-top:13px;font-size:12px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap}
 .back{display:inline-block;color:var(--green);margin-top:18px;text-decoration:none;font-size:12px}
 .note{background:#252525;border:1px solid #383838;border-radius:9px;padding:13px;margin:15px 0;font-size:12px;line-height:1.65;color:#ddd}
-.note a{color:var(--green)}.steps{margin:8px 0 0;padding-left:18px;color:#ccc}.steps li{margin:5px 0}
 .small{font-size:10px;color:#888;line-height:1.55}.fieldrow{display:flex;align-items:center;justify-content:space-between;gap:7px}
-</style></head>
-<body><main class="card">
+#queue{display:grid;gap:10px;margin-top:15px}
+.track-card{background:#202020;border:1px solid #343434;border-radius:10px;padding:12px;min-width:0}
+.track-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.track-file{min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:700}
+.track-meta{font-size:10px;color:#999;margin-top:4px}
+.track-fields{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px}
+.track-fields label{margin:0}.track-fields input{margin-top:5px;min-width:0;font-size:12px;padding:9px}
+.track-status{font-size:10px;color:#aaa;margin-top:9px}
+.remove{background:#393939;color:#fff;padding:6px 10px;margin:0;font-size:10px;flex:none}
+.pill{display:inline-block;border-radius:99px;background:#303030;color:#bbb;padding:4px 8px;font-size:10px}
+.pill.ok{background:#12351f;color:#72e89a}.pill.bad{background:#451d1d;color:#ffaaaa}
+.queue-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.queue-actions button{margin:0}.queue-count{font-size:11px;color:#aaa;margin-left:auto}
+.dropzone{border:1px dashed #555;border-radius:10px;padding:16px;background:#202020}
+@media(max-width:620px){.card{padding:18px}.track-fields{grid-template-columns:1fr}.track-top{align-items:flex-start}}
+</style>
+</head>
+<body>
+<main class="card">
 <div class="brand">MOHSEN<span>.</span>PLAYER / ADMIN</div>
 <h1>Upload to your library</h1>
-<p class="muted">Your audio file is sent to your private Cloudflare Worker, which stores it in your public GitHub music library.</p>
+<p class="muted">Bulk upload with automatic title and artist detection. Arabic and English metadata are supported.</p>
 
 <section id="settings">
 <label for="workerUrl">CLOUDFLARE WORKER URL</label>
 <input id="workerUrl" type="url" placeholder="https://mohsen-player-uploader.yourname.workers.dev" autocomplete="url">
 <div class="fieldrow"><label for="uploadKey">UPLOAD KEY</label><button class="secondary inline" id="generateKey" type="button">GENERATE SECURE KEY</button></div>
 <input id="uploadKey" type="password" autocomplete="off" spellcheck="false" placeholder="The same UPLOAD_KEY you set in Cloudflare">
-<p class="small">The Worker URL and upload key are kept only in this page while it is open. They are not saved to the repository, local storage, or cookies. Generate a strong key here, then add that exact value as a Secret named <b>UPLOAD_KEY</b> in Cloudflare. Save it in your password manager so you can use it here later.</p>
+<p class="small">The Worker URL and upload key stay in this page's memory only. They are not saved in the repository, local storage, or cookies. Never share your upload key.</p>
 <button class="full" id="connectBtn">CHECK WORKER CONNECTION</button>
 </section>
 
 <section id="upload" class="hidden">
-<div class="note"><b>Worker connected.</b> Choose a track. The file will be uploaded to GitHub and added to <b>tracks.json</b> automatically.</div>
-<label for="audioFile">AUDIO FILE · MP3 RECOMMENDED · MAX 20 MB</label>
-<input id="audioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.webm">
-<label for="title">TRACK TITLE</label><input id="title" placeholder="Auto-filled from filename">
-<label for="artist">ARTIST</label><input id="artist" placeholder="Artist name">
-<label for="album">ALBUM / COLLECTION</label><input id="album" placeholder="Singles">
-<button class="full" id="uploadBtn">UPLOAD TRACK TO GITHUB</button>
-<button class="secondary full" id="disconnectBtn">DISCONNECT</button>
+<div class="note"><b>Worker connected.</b> Select several audio files at once. We'll read embedded MP3 tags when available, otherwise detect artist and title from filenames. You can edit every item before uploading.</div>
+<label for="audioFiles">AUDIO FILES · SELECT MULTIPLE · MAX 20 MB EACH</label>
+<div class="dropzone">
+<input id="audioFiles" type="file" multiple accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.webm">
+<p class="small">Examples detected automatically: <span dir="auto">Amr Diab - Tamally Maak.mp3</span> or <span dir="auto">عمرو دياب - تملي معاك.mp3</span>. Embedded MP3 Title / Artist / Album tags take priority when present.</p>
+</div>
+<div class="queue-actions">
+<button class="secondary" id="clearQueue" type="button">CLEAR LIST</button>
+<span class="queue-count" id="queueCount">0 files selected</span>
+</div>
+<div id="queue"></div>
+<div class="queue-actions">
+<button id="uploadAll" type="button" disabled>UPLOAD ALL</button>
+<span class="queue-count" id="progressText">Ready</span>
+</div>
+<button class="secondary full" id="disconnectBtn" type="button">DISCONNECT</button>
 </section>
 
 <div class="status" id="status" role="status" aria-live="polite"></div>
@@ -52,69 +78,254 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
-let workerUrl='',uploadKey='';
-function status(message,isError=false){$('status').textContent=message;$('status').style.color=isError?'#ff9c9c':'#1ed760';}
-function cleanUrl(value){const url=new URL(value);if(url.protocol!=='https:')throw new Error('The Worker URL must start with https://');return url.origin+url.pathname.replace(/\/$/,'');}
+let workerUrl='',uploadKey='',queue=[],nextId=1,isUploading=false;
+const MAX_BYTES=20*1024*1024;
+const ALLOWED_EXTENSIONS=new Set(['mp3','wav','m4a','ogg','flac','aac','opus','webm']);
+
+function status(message,isError=false){
+ $('status').textContent=message;
+ $('status').style.color=isError?'#ff9c9c':'#1ed760';
+}
+function cleanUrl(value){
+ const url=new URL(value);
+ if(url.protocol!=='https:')throw new Error('The Worker URL must start with https://');
+ return url.origin+url.pathname.replace(/\/$/,'');
+}
+function normaliseText(value){
+ return String(value||'').replace(/\u0000/g,'').replace(/[\u0000-\u001f]/g,' ').replace(/\s+/g,' ').trim();
+}
+function removeExtension(name){return name.replace(/\.[^.]+$/,'');}
+function cleanTrackTitle(value){
+ return normaliseText(value)
+  .replace(/^\s*(?:\d{1,3})\s*[.)_\-–—]+\s*/u,'')
+  .replace(/\s*\[(?:official|lyrics?|audio|video|hq|hd)[^\]]*\]\s*/giu,' ')
+  .trim();
+}
+function parseFilename(filename){
+ const stem=removeExtension(filename.split(/[\\/]/).pop()||filename)
+  .replace(/[_]+/g,' ')
+  .replace(/\s+/g,' ').trim();
+ // Supports hyphen, en dash, em dash and Arabic filename conventions.
+ const parts=stem.split(/\s+(?:-|–|—|\|)\s+/u).map(normaliseText).filter(Boolean);
+ if(parts.length>=2){
+  const artist=parts.shift();
+  const title=cleanTrackTitle(parts.join(' - '));
+  return {artist,title:title||cleanTrackTitle(stem),album:'Singles',source:'Detected from filename'};
+ }
+ return {artist:'Unknown artist',title:cleanTrackTitle(stem)||stem,album:'Singles',source:'Detected from filename'};
+}
+function decodeTagText(bytes,encoding){
+ try{
+  if(encoding===0)return new TextDecoder('windows-1252').decode(bytes);
+  if(encoding===1)return new TextDecoder('utf-16').decode(bytes);
+  if(encoding===2)return new TextDecoder('utf-16be').decode(bytes);
+  return new TextDecoder('utf-8').decode(bytes);
+ }catch(_){return new TextDecoder().decode(bytes);}
+}
+function readSynchsafe(bytes,offset){
+ return ((bytes[offset]&127)<<21)|((bytes[offset+1]&127)<<14)|((bytes[offset+2]&127)<<7)|(bytes[offset+3]&127);
+}
+function readUInt32(bytes,offset){
+ return ((bytes[offset]<<24)|(bytes[offset+1]<<16)|(bytes[offset+2]<<8)|bytes[offset+3])>>>0;
+}
+function parseId3(buffer){
+ const bytes=new Uint8Array(buffer),tags={};
+ if(bytes.length<10||String.fromCharCode(...bytes.subarray(0,3))!=='ID3')return tags;
+ const version=bytes[3],tagEnd=Math.min(bytes.length,10+readSynchsafe(bytes,6));
+ let offset=10;
+ while(offset+10<=tagEnd){
+  const frameId=String.fromCharCode(...bytes.subarray(offset,offset+4));
+  if(!/^[A-Z0-9]{4}$/.test(frameId))break;
+  const size=version===4?readSynchsafe(bytes,offset+4):readUInt32(bytes,offset+4);
+  if(!size||offset+10+size>tagEnd)break;
+  if(['TIT2','TPE1','TALB'].includes(frameId)){
+   const frame=bytes.subarray(offset+10,offset+10+size);
+   if(frame.length>1){
+    const encoding=frame[0];
+    let value=decodeTagText(frame.subarray(1),encoding);
+    value=value.replace(/^\uFEFF/,'').split('\u0000')[0].trim();
+    if(value)tags[frameId]=normaliseText(value);
+   }
+  }
+  offset+=10+size;
+ }
+ return tags;
+}
+function parseId3v1(buffer){
+ const bytes=new Uint8Array(buffer),tags={};
+ if(bytes.length<128)return tags;
+ const start=bytes.length-128;
+ if(String.fromCharCode(...bytes.subarray(start,start+3))!=='TAG')return tags;
+ const dec=new TextDecoder('windows-1252');
+ const get=(a,b)=>normaliseText(dec.decode(bytes.subarray(start+a,start+b)));
+ tags.TIT2=get(3,33);tags.TPE1=get(33,63);tags.TALB=get(63,93);
+ return tags;
+}
+async function detectMetadata(file){
+ const fallback=parseFilename(file.name);
+ const ext=(file.name.split('.').pop()||'').toLowerCase();
+ if(ext!=='mp3')return fallback;
+ try{
+  const sample=await file.slice(0,Math.min(file.size,512*1024)).arrayBuffer();
+  let tags=parseId3(sample);
+  if(!tags.TIT2||!tags.TPE1||!tags.TALB){
+   const tail=await file.slice(Math.max(0,file.size-128)).arrayBuffer();
+   const oldTags=parseId3v1(tail);
+   tags={...oldTags,...tags};
+  }
+  const result={
+   title:cleanTrackTitle(tags.TIT2||fallback.title),
+   artist:normaliseText(tags.TPE1||fallback.artist),
+   album:normaliseText(tags.TALB||fallback.album),
+   source:(tags.TIT2||tags.TPE1||tags.TALB)?'Read from embedded MP3 tags':fallback.source
+  };
+  return result;
+ }catch(_){return fallback;}
+}
+function setPill(el,text,kind){
+ el.textContent=text;el.className='pill'+(kind?' '+kind:'');
+}
+function renderQueue(){
+ const host=$('queue');
+ host.innerHTML='';
+ queue.forEach(item=>{
+  const card=document.createElement('article');
+  card.className='track-card';
+  card.innerHTML=
+   '<div class="track-top"><div style="min-width:0"><div class="track-file"></div><div class="track-meta"></div></div><div style="display:flex;align-items:center;gap:8px"><span class="pill"></span><button class="remove" type="button">REMOVE</button></div></div>'+
+   '<div class="track-fields">'+
+    '<label>Title<input class="q-title" type="text" dir="auto"></label>'+
+    '<label>Artist<input class="q-artist" type="text" dir="auto"></label>'+
+    '<label>Album<input class="q-album" type="text" dir="auto"></label>'+
+   '</div><div class="track-status"></div>';
+  card.querySelector('.track-file').textContent=item.file.name;
+  card.querySelector('.track-meta').textContent=(item.file.size/1024/1024).toFixed(2)+' MB · '+item.detectSource;
+  const pill=card.querySelector('.pill');
+  setPill(pill,item.state==='done'?'Uploaded':item.state==='error'?'Failed':'Ready',item.state==='done'?'ok':item.state==='error'?'bad':'');
+  const title=card.querySelector('.q-title'),artist=card.querySelector('.q-artist'),album=card.querySelector('.q-album');
+  title.value=item.title;artist.value=item.artist;album.value=item.album;
+  title.addEventListener('input',()=>item.title=title.value);
+  artist.addEventListener('input',()=>item.artist=artist.value);
+  album.addEventListener('input',()=>item.album=album.value);
+  card.querySelector('.remove').addEventListener('click',()=>{
+   if(isUploading)return;
+   queue=queue.filter(x=>x.id!==item.id);renderQueue();
+  });
+  card.querySelector('.track-status').textContent=item.message||'';
+  host.appendChild(card);
+ });
+ const pending=queue.filter(x=>x.state!=='done').length;
+ $('queueCount').textContent=queue.length+' file'+(queue.length===1?'':'s')+' selected · '+pending+' remaining';
+ $('uploadAll').disabled=isUploading||pending===0;
+ $('uploadAll').textContent=isUploading?'UPLOADING...':(pending?'UPLOAD '+pending+' TRACK'+(pending===1?'':'S'):'ALL UPLOADED');
+ $('clearQueue').disabled=isUploading||queue.length===0;
+}
 $('generateKey').addEventListener('click',()=>{
  const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
  let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
  const key=btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
  $('uploadKey').type='text';$('uploadKey').value=key;
- status('Secure key generated. Copy it to Cloudflare as the UPLOAD_KEY Secret, then keep a copy in your password manager.');
+ status('Secure key generated. Add this exact value as the Cloudflare UPLOAD_KEY Secret, then keep it in your password manager.');
 });
 $('connectBtn').addEventListener('click',async()=>{
  try{
-  workerUrl=cleanUrl($('workerUrl').value.trim());uploadKey=$('uploadKey').value.trim();
-  if(!uploadKey){throw new Error('Enter the UPLOAD_KEY value configured in Cloudflare.');}
+  workerUrl=cleanUrl($('workerUrl').value.trim());
+  uploadKey=$('uploadKey').value.trim();
+  if(!uploadKey)throw new Error('Enter the UPLOAD_KEY configured in Cloudflare.');
   $('connectBtn').disabled=true;status('Checking Cloudflare Worker...');
-  const response=await fetch(workerUrl+'/health',{method:'GET'});
-  if(!response.ok)throw new Error('Worker health check returned HTTP '+response.status+'. Check the URL and make sure the Worker is deployed.');
+  const response=await fetch(workerUrl+'/health');
+  if(!response.ok)throw new Error('Health check returned HTTP '+response.status+'.');
   const data=await response.json();
-  if(!data.ok)throw new Error('The Worker responded, but its health check did not pass.');
+  if(!data.ok)throw new Error('Worker health check did not pass.');
   $('settings').classList.add('hidden');$('upload').classList.remove('hidden');
-  status('Worker is online. Choose a track to upload.');
+  status('Worker is online. Select multiple tracks to build your upload queue.');
  }catch(error){status(error.message||'Could not connect to the Worker.',true);}
  finally{$('connectBtn').disabled=false;}
 });
 $('disconnectBtn').addEventListener('click',()=>{
- workerUrl='';uploadKey='';$('workerUrl').value='';$('uploadKey').value='';
+ if(isUploading)return;
+ workerUrl='';uploadKey='';queue=[];
+ $('workerUrl').value='';$('uploadKey').value='';
  $('upload').classList.add('hidden');$('settings').classList.remove('hidden');
- $('audioFile').value='';$('title').value='';$('artist').value='';$('album').value='';
- status('Disconnected. Worker URL and upload key cleared from this page.');
+ $('queue').innerHTML='';$('audioFiles').value='';
+ renderQueue();status('Disconnected. The upload key has been cleared from this page.');
 });
-$('audioFile').addEventListener('change',()=>{
- const file=$('audioFile').files[0];
- if(file){$('title').value=file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim();status('Selected '+file.name+' ('+(file.size/1024/1024).toFixed(2)+' MB).');}
+$('audioFiles').addEventListener('change',async event=>{
+ const files=Array.from(event.target.files||[]);
+ if(!files.length)return;
+ const accepted=files.filter(file=>{
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  return file.type.startsWith('audio/')||ALLOWED_EXTENSIONS.has(ext);
+ });
+ const rejected=files.length-accepted.length;
+ status('Detecting track information for '+accepted.length+' file(s)...');
+ const detected=await Promise.all(accepted.map(async file=>{
+  const meta=await detectMetadata(file);
+  return {id:nextId++,file,title:meta.title,artist:meta.artist,album:meta.album,detectSource:meta.source,state:'ready',message:''};
+ }));
+ queue.push(...detected);
+ renderQueue();
+ status('Added '+detected.length+' file(s) to the queue.'+(rejected?' Ignored '+rejected+' unsupported file(s).':''));
+ event.target.value='';
+});
+$('clearQueue').addEventListener('click',()=>{
+ if(isUploading)return;
+ queue=[];renderQueue();status('Upload queue cleared.');
 });
 function encodeFile(buffer){
  const bytes=new Uint8Array(buffer);let binary='';const step=0x8000;
  for(let i=0;i<bytes.length;i+=step)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+step,bytes.length)));
  return btoa(binary);
 }
-$('uploadBtn').addEventListener('click',async()=>{
- const button=$('uploadBtn'),file=$('audioFile').files[0];
- const title=$('title').value.trim(),artist=$('artist').value.trim()||'Unknown artist',album=$('album').value.trim()||'Singles';
- if(!file){status('Choose an audio file first.',true);return;}
- if(file.size===0){status('The selected file is empty.',true);return;}
- if(file.size>20*1024*1024){status('This file exceeds the 20 MB limit. Choose a smaller audio file.',true);return;}
- if(!title){status('Enter a track title.',true);return;}
- button.disabled=true;button.textContent='UPLOADING...';
- try{
-  status('Reading audio file...');
-  const fileBase64=encodeFile(await file.arrayBuffer());
-  status('Sending file to your Cloudflare Worker...');
-  const response=await fetch(workerUrl+'/upload',{
-   method:'POST',
-   headers:{'Content-Type':'application/json','X-Upload-Key':uploadKey},
-   body:JSON.stringify({title,artist,album,fileName:file.name,fileBase64})
-  });
-  let result={};try{result=await response.json()}catch(_){}
-  if(!response.ok||!result.ok)throw new Error(result.error||('Upload failed with HTTP '+response.status+'.'));
-  status('Success! “'+result.track.title+'” was added to your public library. GitHub Pages may take a minute to publish the update.');
-  $('audioFile').value='';$('title').value='';$('artist').value='';$('album').value='';
- }catch(error){status(error.message||'Upload failed. Check the Worker URL, upload key and Cloudflare logs.',true);}
- finally{button.disabled=false;button.textContent='UPLOAD TRACK TO GITHUB';}
+async function uploadOne(item){
+ const ext=(item.file.name.match(/\.[a-z0-9]+$/i)||['.mp3'])[0].toLowerCase();
+ const payload={
+  title:normaliseText(item.title)||removeExtension(item.file.name),
+  artist:normaliseText(item.artist)||'Unknown artist',
+  album:normaliseText(item.album)||'Singles',
+  fileName:item.file.name,
+  fileBase64:encodeFile(await item.file.arrayBuffer())
+ };
+ const response=await fetch(workerUrl+'/upload',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','X-Upload-Key':uploadKey},
+  body:JSON.stringify(payload)
+ });
+ let result={};try{result=await response.json();}catch(_){}
+ if(!response.ok||!result.ok)throw new Error(result.error||('HTTP '+response.status));
+ return result;
+}
+$('uploadAll').addEventListener('click',async()=>{
+ if(isUploading)return;
+ const batch=queue.filter(item=>item.state!=='done');
+ if(!batch.length)return;
+ isUploading=true;renderQueue();
+ let success=0,failed=0;
+ for(let index=0;index<batch.length;index++){
+  const item=batch[index];
+  if(item.file.size===0){item.state='error';item.message='Skipped: empty file.';failed++;renderQueue();continue;}
+  if(item.file.size>MAX_BYTES){item.state='error';item.message='Skipped: exceeds the 20 MB file limit.';failed++;renderQueue();continue;}
+  if(!normaliseText(item.title)){item.state='error';item.message='Skipped: title is required.';failed++;renderQueue();continue;}
+  item.state='uploading';item.message='Uploading '+(index+1)+' of '+batch.length+'...';
+  $('progressText').textContent=(index+1)+' / '+batch.length;
+  status('Uploading '+(index+1)+' of '+batch.length+': '+item.file.name);
+  renderQueue();
+  try{
+   const result=await uploadOne(item);
+   item.state='done';item.message='Added to library as '+result.track.src;
+   success++;
+  }catch(error){
+   item.state='error';item.message=error.message||'Upload failed.';
+   failed++;
+  }
+  renderQueue();
+ }
+ isUploading=false;renderQueue();
+ $('progressText').textContent=success+' uploaded · '+failed+' failed';
+ status('Bulk upload finished. '+success+' uploaded, '+failed+' failed.'+(failed?' Failed items remain in the list so you can fix and retry them.':''));
 });
 window.addEventListener('pagehide',()=>{workerUrl='';uploadKey='';});
 })();
-</script></body></html>
+</script>
+</body>
+</html>

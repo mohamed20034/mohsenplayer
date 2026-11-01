@@ -293,11 +293,13 @@ async function uploadOne(item){
  });
  let result={};try{result=await response.json();}catch(_){}
  if(!response.ok||!result.ok){
+  const gd=result.githubDetails||{};
   const detail=[
    result.error||('HTTP '+response.status),
    result.stage?('Stage: '+result.stage):'',
-   result.githubDetails&&result.githubDetails.acceptedPermissions?('GitHub requires: '+result.githubDetails.acceptedPermissions):'',
-   result.githubDetails&&result.githubDetails.requestId?('Request ID: '+result.githubDetails.requestId):''
+   gd.acceptedPermissions?('GitHub requires: '+gd.acceptedPermissions):'',
+   gd.requestId?('Request ID: '+gd.requestId):'',
+   gd.body?('GitHub response: '+gd.body):''
   ].filter(Boolean).join(' | ');
   throw new Error(detail);
  }

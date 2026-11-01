@@ -1,83 +1,120 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121212"><title>MOHSEN PLAYER · Admin</title>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121212">
+<title>MOHSEN PLAYER · Admin</title>
 <style>
-:root{color-scheme:dark;--green:#1ed760;--muted:#aaa}*{box-sizing:border-box}body{margin:0;background:#090909;color:#fff;font:14px Arial,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px}.card{width:min(100%,520px);background:#181818;border:1px solid #303030;border-radius:16px;padding:25px}.brand{font-weight:900;letter-spacing:.12em}.brand span{color:var(--green)}h1{font-size:27px;margin:24px 0 8px}.muted{color:var(--muted);line-height:1.6;font-size:12px}label{display:block;margin:15px 0 6px;color:#ccc;font-size:11px;font-weight:700}input{width:100%;padding:12px;border:1px solid #444;border-radius:8px;background:#242424;color:white;outline:none}input:focus{border-color:var(--green)}button{border:0;border-radius:99px;background:var(--green);color:#071509;font-weight:900;padding:13px 18px;cursor:pointer;width:100%;margin-top:14px}.secondary{background:#333;color:#fff}.hidden{display:none}.status{margin-top:13px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}.code{font-size:25px;letter-spacing:.15em;color:var(--green);font-weight:900;text-align:center;padding:15px}.back{display:inline-block;color:var(--green);margin-top:18px;text-decoration:none;font-size:12px}
-</style></head><body><main class="card">
-<div class="brand">MOHSEN<span>.</span>PLAYER / ADMIN</div><h1>Upload to your library</h1>
-<p class="muted">Sign in with GitHub using its Device Flow. Your access token stays in memory in this tab and is never saved to this website or repository.</p>
-<section id="connect">
-<label for="clientId">GITHUB OAUTH APP CLIENT ID</label><input id="clientId" placeholder="Iv1.xxxxxxxxxxxxxxxx" autocomplete="off">
-<p class="muted">Create a GitHub OAuth App, enable Device Flow, and use the public MOHSEN PLAYER URL as its homepage. Only the Client ID is entered here; never put a Client Secret in this page.</p>
-<button id="connectBtn">CONNECT GITHUB</button><div id="device" class="hidden"><div class="muted" style="text-align:center;margin-top:15px">Open github.com/login/device and enter this code:</div><div class="code" id="userCode"></div><button class="secondary" id="verifyBtn">OPEN GITHUB DEVICE LOGIN</button></div>
+:root{color-scheme:dark;--green:#1ed760;--muted:#aaa}*{box-sizing:border-box}
+body{margin:0;background:#090909;color:#fff;font:14px Arial,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px}
+.card{width:min(100%,560px);background:#181818;border:1px solid #303030;border-radius:16px;padding:25px}
+.brand{font-weight:900;letter-spacing:.12em}.brand span{color:var(--green)}
+h1{font-size:27px;margin:24px 0 8px}.muted{color:var(--muted);line-height:1.6;font-size:12px}
+label{display:block;margin:15px 0 6px;color:#ccc;font-size:11px;font-weight:700}
+input{width:100%;padding:12px;border:1px solid #444;border-radius:8px;background:#242424;color:white;outline:none}
+input:focus{border-color:var(--green)}
+button{border:0;border-radius:99px;background:var(--green);color:#071509;font-weight:900;padding:12px 18px;cursor:pointer;margin-top:12px}
+button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#333;color:#fff}.inline{padding:8px 12px;font-size:11px;margin:0 0 0 8px}
+.hidden{display:none!important}.status{margin-top:13px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.back{display:inline-block;color:var(--green);margin-top:18px;text-decoration:none;font-size:12px}
+.note{background:#252525;border:1px solid #383838;border-radius:9px;padding:13px;margin:15px 0;font-size:12px;line-height:1.65;color:#ddd}
+.note a{color:var(--green)}.steps{margin:8px 0 0;padding-left:18px;color:#ccc}.steps li{margin:5px 0}
+.small{font-size:10px;color:#888;line-height:1.55}.fieldrow{display:flex;align-items:center;justify-content:space-between;gap:7px}
+</style></head>
+<body><main class="card">
+<div class="brand">MOHSEN<span>.</span>PLAYER / ADMIN</div>
+<h1>Upload to your library</h1>
+<p class="muted">Your audio file is sent to your private Cloudflare Worker, which stores it in your public GitHub music library.</p>
+
+<section id="settings">
+<label for="workerUrl">CLOUDFLARE WORKER URL</label>
+<input id="workerUrl" type="url" placeholder="https://mohsen-player-uploader.yourname.workers.dev" autocomplete="url">
+<div class="fieldrow"><label for="uploadKey">UPLOAD KEY</label><button class="secondary inline" id="generateKey" type="button">GENERATE SECURE KEY</button></div>
+<input id="uploadKey" type="password" autocomplete="off" spellcheck="false" placeholder="The same UPLOAD_KEY you set in Cloudflare">
+<p class="small">The Worker URL and upload key are kept only in this page while it is open. They are not saved to the repository, local storage, or cookies. Generate a strong key here, then add that exact value as a Secret named <b>UPLOAD_KEY</b> in Cloudflare. Save it in your password manager so you can use it here later.</p>
+<button class="full" id="connectBtn">CHECK WORKER CONNECTION</button>
 </section>
+
 <section id="upload" class="hidden">
-<label for="audioFile">AUDIO FILE · MP3 RECOMMENDED · MAX 25 MB</label><input id="audioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus">
+<div class="note"><b>Worker connected.</b> Choose a track. The file will be uploaded to GitHub and added to <b>tracks.json</b> automatically.</div>
+<label for="audioFile">AUDIO FILE · MP3 RECOMMENDED · MAX 20 MB</label>
+<input id="audioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.webm">
 <label for="title">TRACK TITLE</label><input id="title" placeholder="Auto-filled from filename">
 <label for="artist">ARTIST</label><input id="artist" placeholder="Artist name">
 <label for="album">ALBUM / COLLECTION</label><input id="album" placeholder="Singles">
-<button id="uploadBtn">UPLOAD TRACK TO GITHUB</button>
+<button class="full" id="uploadBtn">UPLOAD TRACK TO GITHUB</button>
+<button class="secondary full" id="disconnectBtn">DISCONNECT</button>
 </section>
-<div class="status" id="status" role="status"></div>
+
+<div class="status" id="status" role="status" aria-live="polite"></div>
 <a class="back" href="./index.html">← Back to MOHSEN PLAYER</a>
 </main>
 <script>
-(()=> {
+(()=>{
+'use strict';
 const $=id=>document.getElementById(id);
-const OWNER='mohamed20034',REPO='mohsenplayer',BRANCH='main';
-let accessToken='',pollTimer=null;
-const api=p=>'https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/'+p.split('/').map(encodeURIComponent).join('/');
-function status(s,bad=false){$('status').textContent=s;$('status').style.color=bad?'#ff9c9c':'#1ed760'}
-function headers(){return {'Authorization':'Bearer '+accessToken,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'}}
-async function github(url,opts={}){const r=await fetch(url,{...opts,headers:{...headers(),...(opts.headers||{})}});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.message||'GitHub API error '+r.status);return j}
-function decodeContent(s){const b=atob(s.replace(/\n/g,''));return new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0)))}
-function encodeText(s){const bytes=new TextEncoder().encode(s);let b='';for(const x of bytes)b+=String.fromCharCode(x);return btoa(b)}
-function encodeFile(buf){const bytes=new Uint8Array(buf);let b='',step=0x8000;for(let i=0;i<bytes.length;i+=step)b+=String.fromCharCode(...bytes.subarray(i,Math.min(i+step,bytes.length)));return btoa(b)}
-async function getFile(path){const r=await fetch(api(path)+'?ref='+BRANCH,{headers:headers()});if(r.status===404)return null;let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.message||'Cannot read '+path);return {sha:j.sha,text:decodeContent(j.content||'')}}
-$('connectBtn').onclick=async()=>{
- const clientId=$('clientId').value.trim();if(!clientId){status('Enter your GitHub OAuth App Client ID.',true);return}
- $('connectBtn').disabled=true;status('Requesting GitHub device authorization...');
+let workerUrl='',uploadKey='';
+function status(message,isError=false){$('status').textContent=message;$('status').style.color=isError?'#ff9c9c':'#1ed760';}
+function cleanUrl(value){const url=new URL(value);if(url.protocol!=='https:')throw new Error('The Worker URL must start with https://');return url.origin+url.pathname.replace(/\/$/,'');}
+$('generateKey').addEventListener('click',()=>{
+ const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
+ let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
+ const key=btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ $('uploadKey').type='text';$('uploadKey').value=key;
+ status('Secure key generated. Copy it to Cloudflare as the UPLOAD_KEY Secret, then keep a copy in your password manager.');
+});
+$('connectBtn').addEventListener('click',async()=>{
  try{
-  const body=new URLSearchParams({client_id:clientId,scope:'public_repo'});
-  const r=await fetch('https://github.com/login/device/code',{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded'},body});
-  const d=await r.json();if(!r.ok||!d.device_code)throw new Error(d.error_description||d.error||'Could not start GitHub login. Check that Device Flow is enabled in your OAuth App.');
-  $('userCode').textContent=d.user_code;$('device').classList.remove('hidden');$('verifyBtn').onclick=()=>window.open(d.verification_uri,'_blank','noopener');
-  status('Waiting for you to authorize this app on GitHub...');
-  let interval=(d.interval||5)*1000,expires=Date.now()+(d.expires_in||900)*1000;
-  const poll=async()=>{
-   if(Date.now()>expires){clearInterval(pollTimer);status('Device code expired. Start again.',true);$('connectBtn').disabled=false;return}
-   try{
-    const pr=await fetch('https://github.com/login/oauth/access_token',{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:clientId,device_code:d.device_code,grant_type:'urn:ietf:params:oauth:grant-type:device_code'})});
-    const pd=await pr.json();
-    if(pd.access_token){clearInterval(pollTimer);accessToken=pd.access_token;$('connect').classList.add('hidden');$('upload').classList.remove('hidden');status('GitHub connected. Choose a track to upload.');}
-    else if(pd.error==='slow_down'){clearInterval(pollTimer);interval+=5000;pollTimer=setInterval(poll,interval)}
-    else if(pd.error&&pd.error!=='authorization_pending'){clearInterval(pollTimer);status(pd.error_description||pd.error,true);$('connectBtn').disabled=false}
-   }catch(e){clearInterval(pollTimer);status(e.message,true);$('connectBtn').disabled=false}
-  };
-  pollTimer=setInterval(poll,interval);
- }catch(e){status(e.message,true);$('connectBtn').disabled=false}
-};
-$('audioFile').onchange=()=>{const f=$('audioFile').files[0];if(f)$('title').value=f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim()};
-$('uploadBtn').onclick=async()=>{
- const btn=$('uploadBtn'),file=$('audioFile').files[0],title=$('title').value.trim(),artist=$('artist').value.trim()||'Unknown artist',album=$('album').value.trim()||'Singles';
- if(!accessToken){status('Connect GitHub first.',true);return}if(!file){status('Choose an audio file.',true);return}if(file.size>25*1024*1024){status('File exceeds 25 MB. Please use a smaller MP3.',true);return}if(!title){status('Enter a track title.',true);return}
- const ext=(file.name.match(/\.[a-z0-9]+$/i)||['.mp3'])[0].toLowerCase(),base=file.name.replace(/\.[^.]+$/,'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'track',path='music/'+base+ext;
- btn.disabled=true;btn.textContent='UPLOADING...';
+  workerUrl=cleanUrl($('workerUrl').value.trim());uploadKey=$('uploadKey').value.trim();
+  if(!uploadKey){throw new Error('Enter the UPLOAD_KEY value configured in Cloudflare.');}
+  $('connectBtn').disabled=true;status('Checking Cloudflare Worker...');
+  const response=await fetch(workerUrl+'/health',{method:'GET'});
+  if(!response.ok)throw new Error('Worker health check returned HTTP '+response.status+'. Check the URL and make sure the Worker is deployed.');
+  const data=await response.json();
+  if(!data.ok)throw new Error('The Worker responded, but its health check did not pass.');
+  $('settings').classList.add('hidden');$('upload').classList.remove('hidden');
+  status('Worker is online. Choose a track to upload.');
+ }catch(error){status(error.message||'Could not connect to the Worker.',true);}
+ finally{$('connectBtn').disabled=false;}
+});
+$('disconnectBtn').addEventListener('click',()=>{
+ workerUrl='';uploadKey='';$('workerUrl').value='';$('uploadKey').value='';
+ $('upload').classList.add('hidden');$('settings').classList.remove('hidden');
+ $('audioFile').value='';$('title').value='';$('artist').value='';$('album').value='';
+ status('Disconnected. Worker URL and upload key cleared from this page.');
+});
+$('audioFile').addEventListener('change',()=>{
+ const file=$('audioFile').files[0];
+ if(file){$('title').value=file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim();status('Selected '+file.name+' ('+(file.size/1024/1024).toFixed(2)+' MB).');}
+});
+function encodeFile(buffer){
+ const bytes=new Uint8Array(buffer);let binary='';const step=0x8000;
+ for(let i=0;i<bytes.length;i+=step)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+step,bytes.length)));
+ return btoa(binary);
+}
+$('uploadBtn').addEventListener('click',async()=>{
+ const button=$('uploadBtn'),file=$('audioFile').files[0];
+ const title=$('title').value.trim(),artist=$('artist').value.trim()||'Unknown artist',album=$('album').value.trim()||'Singles';
+ if(!file){status('Choose an audio file first.',true);return;}
+ if(file.size===0){status('The selected file is empty.',true);return;}
+ if(file.size>20*1024*1024){status('This file exceeds the 20 MB limit. Choose a smaller audio file.',true);return;}
+ if(!title){status('Enter a track title.',true);return;}
+ button.disabled=true;button.textContent='UPLOADING...';
  try{
-  status('Checking '+path+'...');
-  const existing=await getFile(path);if(existing&&!confirm(path+' already exists. Replace it?'))throw new Error('Upload cancelled.');
-  status('Uploading audio file...');
-  const payload={message:'Add audio track: '+title,branch:BRANCH,content:encodeFile(await file.arrayBuffer())};if(existing)payload.sha=existing.sha;
-  await github(api(path),{method:'PUT',body:JSON.stringify(payload)});
-  status('Audio uploaded. Updating the catalogue...');
-  const cat=await getFile('tracks.json');if(!cat)throw new Error('Audio uploaded, but tracks.json was not found.');
-  const data=JSON.parse(cat.text);if(!Array.isArray(data.tracks))data.tracks=[];
-  const track={title,artist,album,src:path},idx=data.tracks.findIndex(t=>t.src===path);if(idx>=0)data.tracks[idx]=track;else data.tracks.push(track);
-  await github(api('tracks.json'),{method:'PUT',body:JSON.stringify({message:'Update music catalogue: '+title,branch:BRANCH,sha:cat.sha,content:encodeText(JSON.stringify(data,null,2))})});
-  status('Success! Track added. GitHub Pages may take a minute to redeploy.');
+  status('Reading audio file...');
+  const fileBase64=encodeFile(await file.arrayBuffer());
+  status('Sending file to your Cloudflare Worker...');
+  const response=await fetch(workerUrl+'/upload',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','X-Upload-Key':uploadKey},
+   body:JSON.stringify({title,artist,album,fileName:file.name,fileBase64})
+  });
+  let result={};try{result=await response.json()}catch(_){}
+  if(!response.ok||!result.ok)throw new Error(result.error||('Upload failed with HTTP '+response.status+'.'));
+  status('Success! “'+result.track.title+'” was added to your public library. GitHub Pages may take a minute to publish the update.');
   $('audioFile').value='';$('title').value='';$('artist').value='';$('album').value='';
- }catch(e){status(e.message||'Upload failed.',true)}
- finally{btn.disabled=false;btn.textContent='UPLOAD TRACK TO GITHUB'}
-};
-window.addEventListener('beforeunload',()=>{accessToken='';if(pollTimer)clearInterval(pollTimer)});
+ }catch(error){status(error.message||'Upload failed. Check the Worker URL, upload key and Cloudflare logs.',true);}
+ finally{button.disabled=false;button.textContent='UPLOAD TRACK TO GITHUB';}
+});
+window.addEventListener('pagehide',()=>{workerUrl='';uploadKey='';});
 })();
 </script></body></html>

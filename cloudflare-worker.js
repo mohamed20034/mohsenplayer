@@ -61,6 +61,7 @@ async function github(path, token, options = {}) {
     ...fetchOptions,
     headers: {
       "Authorization": "Bearer " + token,
+      "User-Agent": "MOHSEN-PLAYER-Cloudflare-Worker/1.0",
       "Accept": "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       "Content-Type": "application/json",
@@ -103,7 +104,7 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     if (url.pathname === "/health" && request.method === "GET") {
-      return new Response(JSON.stringify({ ok: true, service: "mohsen-player-uploader", version: "diagnostic-v5" }), {
+      return new Response(JSON.stringify({ ok: true, service: "mohsen-player-uploader", version: "diagnostic-v6" }), {
         headers: { ...corsHeaders(), "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
       });
     }
@@ -114,7 +115,7 @@ export default {
       try {
         const file = await getContent("tracks.json", env.GH_TOKEN);
         if (!file) return json({ ok: false, stage: "reading_tracks_json", error: "GitHub token could not find tracks.json in the configured repository." }, 404);
-        return json({ ok: true, version: "diagnostic-v5", repository: OWNER + "/" + REPO, permissionCheck: "Contents read succeeded", tracksJsonSha: file.sha });
+        return json({ ok: true, version: "diagnostic-v6", repository: OWNER + "/" + REPO, permissionCheck: "Contents read succeeded", tracksJsonSha: file.sha });
       } catch (error) {
         return json({
           ok: false,

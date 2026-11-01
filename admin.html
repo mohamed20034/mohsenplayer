@@ -292,7 +292,15 @@ async function uploadOne(item){
   body:JSON.stringify(payload)
  });
  let result={};try{result=await response.json();}catch(_){}
- if(!response.ok||!result.ok)throw new Error(result.error||('HTTP '+response.status));
+ if(!response.ok||!result.ok){
+  const detail=[
+   result.error||('HTTP '+response.status),
+   result.stage?('Stage: '+result.stage):'',
+   result.githubDetails&&result.githubDetails.acceptedPermissions?('GitHub requires: '+result.githubDetails.acceptedPermissions):'',
+   result.githubDetails&&result.githubDetails.requestId?('Request ID: '+result.githubDetails.requestId):''
+  ].filter(Boolean).join(' | ');
+  throw new Error(detail);
+ }
  return result;
 }
 $('uploadAll').addEventListener('click',async()=>{

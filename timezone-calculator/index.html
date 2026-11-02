@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d18">
+  <meta name="description" content="احسب فرق التوقيت بين مصر وأي مكان في العالم باستخدام ZIP Code أو العنوان.">
+  <title>Mohsen Time Zone Converter</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090d18;
+      --panel: #111827;
+      --panel-2: #151f31;
+      --line: rgba(164, 180, 210, .15);
+      --muted: #9aa8bf;
+      --text: #f3f6fc;
+      --accent: #9b8cff;
+      --accent-2: #65d8d0;
+      --danger: #ff8d9b;
+      --success: #7ce1bc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 10% 0%, rgba(115, 92, 255, .18), transparent 35%),
+        radial-gradient(ellipse at 100% 60%, rgba(42, 184, 177, .10), transparent 32%),
+        var(--bg);
+      font-family: Inter, "Segoe UI", Tahoma, Arial, sans-serif;
+      line-height: 1.55;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1120px, calc(100% - 36px)); margin: 0 auto; padding: 38px 0 28px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 42px; }
+    .brand { display: flex; align-items: center; gap: 12px; direction: ltr; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center;
+      color: #0b1020; background: linear-gradient(135deg, #b5aaff, #6ee0d4);
+      font-weight: 900; font-size: 17px; box-shadow: 0 8px 30px rgba(114, 105, 255, .24);
+    }
+    .brand-name { font-size: 13px; letter-spacing: .14em; font-weight: 800; }
+    .brand-sub { color: var(--muted); font-size: 10px; letter-spacing: .12em; margin-top: 1px; }
+    .live-pill { display: flex; align-items: center; gap: 8px; color: #b9c7da; font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 12px rgba(124,225,188,.75); }
+    .hero { max-width: 720px; margin: 0 0 28px; }
+    .eyebrow { color: var(--accent-2); font-size: 11px; letter-spacing: .18em; font-weight: 800; direction: ltr; text-align: right; }
+    h1 { margin: 8px 0 10px; font-size: clamp(30px, 5vw, 48px); line-height: 1.18; letter-spacing: -.04em; }
+    .hero p { color: var(--muted); margin: 0; font-size: 15px; max-width: 620px; }
+    .workspace { display: grid; grid-template-columns: minmax(280px, .82fr) minmax(0, 1.35fr); gap: 18px; align-items: stretch; }
+    .panel { background: linear-gradient(150deg, rgba(21,31,49,.96), rgba(15,23,38,.96)); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 18px 60px rgba(0,0,0,.18); }
+    .search-panel { padding: 25px; }
+    .section-label { color: #c8d2e3; font-size: 12px; font-weight: 800; letter-spacing: .08em; margin: 0 0 14px; }
+    .field-label { display: block; color: var(--text); font-size: 13px; font-weight: 700; margin-bottom: 9px; }
+    .search-form { display: grid; gap: 10px; }
+    .search-input {
+      width: 100%; color: var(--text); background: #0b1220; border: 1px solid rgba(169,184,215,.22);
+      border-radius: 13px; outline: none; padding: 14px 15px; min-height: 52px; transition: border-color .2s, box-shadow .2s;
+      direction: ltr; text-align: left;
+    }
+    .search-input::placeholder { color: #718099; }
+    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(155,140,255,.13); }
+    .primary-btn {
+      min-height: 50px; border: 0; border-radius: 13px; color: #0b1020; font-weight: 850;
+      background: linear-gradient(100deg, #b6aaff, #75e0d6); box-shadow: 0 9px 24px rgba(127,126,255,.17);
+      transition: transform .15s, filter .15s;
+    }
+    .primary-btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .primary-btn:disabled { opacity: .6; cursor: wait; transform: none; }
+    .hint { color: #8291aa; font-size: 11px; margin: 10px 1px 0; }
+    .status { min-height: 22px; color: var(--muted); font-size: 12px; margin-top: 15px; }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--success); }
+    .candidates { display: grid; gap: 8px; margin-top: 7px; }
+    .candidate {
+      width: 100%; text-align: right; color: var(--text); background: rgba(8,14,26,.64); border: 1px solid var(--line);
+      border-radius: 12px; padding: 12px 13px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      transition: border-color .15s, background .15s;
+    }
+    .candidate:hover { border-color: rgba(155,140,255,.6); background: rgba(42,48,76,.5); }
+    .candidate:disabled { opacity: .55; cursor: wait; }
+    .candidate strong { display: block; font-size: 13px; font-weight: 750; }
+    .candidate small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .candidate-arrow { color: var(--accent-2); font-size: 20px; flex: 0 0 auto; }
+    .results-panel { padding: 25px; min-height: 390px; position: relative; overflow: hidden; }
+    .results-panel::after { content: ""; position: absolute; width: 240px; height: 240px; border-radius: 50%; border: 1px solid rgba(155,140,255,.08); left: -130px; bottom: -140px; pointer-events: none; }
+    .empty-state { min-height: 330px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--muted); padding: 25px; }
+    .globe { width: 82px; height: 82px; border-radius: 50%; display: grid; place-items: center; color: var(--accent-2); border: 1px solid rgba(101,216,208,.24); background: radial-gradient(circle at 35% 30%, rgba(101,216,208,.15), rgba(155,140,255,.08)); margin-bottom: 17px; }
+    .globe svg { width: 42px; height: 42px; }
+    .empty-state strong { color: #e4eaf5; font-size: 16px; margin-bottom: 6px; }
+    .empty-state span { font-size: 12px; max-width: 290px; }
+    .clock-view[hidden], .empty-state[hidden] { display: none; }
+    .clock-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 17px; }
+    .clock-heading { min-width: 0; }
+    .clock-heading .section-label { margin-bottom: 4px; }
+    .clock-heading .place-title { font-size: 13px; color: #e4eaf5; overflow-wrap: anywhere; }
+    .format-switch { display: flex; gap: 3px; padding: 3px; border-radius: 9px; background: #0b1220; border: 1px solid var(--line); direction: ltr; }
+    .format-switch button { border: 0; background: transparent; color: #8291aa; padding: 6px 9px; border-radius: 7px; font-size: 10px; font-weight: 800; }
+    .format-switch button.active { color: #111827; background: #b5aaff; }
+    .clocks { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .clock-card { min-width: 0; border: 1px solid var(--line); border-radius: 17px; padding: 17px; background: rgba(8,14,26,.62); }
+    .clock-card.place { background: linear-gradient(145deg, rgba(101,216,208,.09), rgba(8,14,26,.68)); border-color: rgba(101,216,208,.18); }
+    .clock-kicker { color: #a4b1c7; font-size: 10px; font-weight: 850; letter-spacing: .13em; direction: ltr; text-align: right; }
+    .clock-city { margin-top: 7px; font-size: 14px; font-weight: 800; color: #f3f6fc; overflow-wrap: anywhere; }
+    .clock-time { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; font-size: clamp(27px, 4vw, 39px); line-height: 1.18; font-weight: 850; letter-spacing: -.05em; margin: 14px 0 7px; white-space: nowrap; }
+    .clock-date { color: #95a3b9; font-size: 11px; min-height: 18px; }
+    .clock-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px; border-top: 1px solid var(--line); margin-top: 13px; padding-top: 10px; color: #b2bfd2; font-size: 10px; direction: ltr; }
+    .zone-code { color: var(--accent-2); font-weight: 800; overflow-wrap: anywhere; }
+    .difference {
+      margin-top: 12px; border: 1px solid rgba(155,140,255,.26); border-radius: 16px;
+      background: linear-gradient(100deg, rgba(155,140,255,.13), rgba(101,216,208,.08)); padding: 15px 17px;
+      display: flex; justify-content: space-between; align-items: center; gap: 14px;
+    }
+    .difference-label { color: #aab6cb; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+    .difference-main { color: #f4f1ff; font-size: 17px; font-weight: 850; margin-top: 4px; }
+    .difference-number { direction: ltr; white-space: nowrap; color: var(--accent-2); font-size: 25px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .location-note { margin-top: 12px; display: flex; gap: 8px; align-items: flex-start; color: #8c9ab1; font-size: 10px; line-height: 1.7; }
+    .location-note svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 2px; }
+    .location-note a, .credits a { color: #a99cff; text-decoration: none; }
+    .location-note a:hover, .credits a:hover { text-decoration: underline; }
+    .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 13px; }
+    .secondary-btn { color: #c7d2e5; background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 11px; }
+    .secondary-btn:hover { border-color: rgba(155,140,255,.55); color: white; }
+    .credits { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 18px; color: #75839a; font-size: 10px; margin-top: 25px; padding: 0 4px; }
+    .credits span { direction: ltr; }
+    footer { color: #58677f; text-align: center; font-size: 10px; padding: 22px 0 5px; }
+    @media (max-width: 780px) {
+      .shell { width: min(100% - 24px, 560px); padding-top: 22px; }
+      .topbar { margin-bottom: 30px; }
+      .workspace { grid-template-columns: 1fr; }
+      .results-panel { min-height: 350px; }
+      .empty-state { min-height: 260px; }
+      .clock-time { font-size: clamp(25px, 7vw, 36px); }
+    }
+    @media (max-width: 430px) {
+      .shell { width: calc(100% - 20px); }
+      .search-panel, .results-panel { padding: 18px; border-radius: 18px; }
+      .clocks { gap: 8px; }
+      .clock-card { padding: 12px; }
+      .clock-time { font-size: 25px; }
+      .clock-city { font-size: 12px; }
+      .difference { padding: 12px; }
+      .difference-main { font-size: 14px; }
+      .difference-number { font-size: 21px; }
+      .live-pill { font-size: 10px; padding: 7px 9px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Mohsen Tools">
+        <div class="brand-mark">M</div>
+        <div>
+          <div class="brand-name">MOHSEN TOOLS</div>
+          <div class="brand-sub">TIME ZONE CONVERTER</div>
+        </div>
+      </div>
+      <div class="live-pill"><span class="live-dot"></span><span>توقيت مباشر</span></div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">TIME, WITHOUT THE GUESSWORK</div>
+      <h1>مصر كام الساعة عندهم؟</h1>
+      <p>اكتب ZIP Code أو Postal Code أو العنوان الكامل، واعرف الوقت هناك مقارنةً بتوقيت مصر — مع حساب التوقيت الصيفي تلقائيًا.</p>
+    </section>
+
+    <main class="workspace">
+      <section class="panel search-panel" aria-labelledby="searchTitle">
+        <h2 class="section-label" id="searchTitle">01 / ابحث عن المكان</h2>
+        <form class="search-form" id="searchForm">
+          <label class="field-label" for="locationInput">ZIP Code أو العنوان</label>
+          <input class="search-input" id="locationInput" type="search" autocomplete="off" maxlength="180"
+            placeholder="مثال: 10001, New York, USA" required>
+          <button class="primary-btn" id="searchButton" type="submit">ابحث عن المكان <span aria-hidden="true">←</span></button>
+        </form>
+        <p class="hint">لأفضل نتيجة، أضف اسم المدينة والدولة بجانب الرمز البريدي.</p>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+        <div class="candidates" id="candidates" aria-label="نتائج البحث"></div>
+      </section>
+
+      <section class="panel results-panel" aria-label="مقارنة التوقيت">
+        <div class="empty-state" id="emptyState">
+          <div class="globe" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="24" cy="24" r="18"></circle>
+              <path d="M6 24h36M24 6c5 5 7 11 7 18s-2 13-7 18c-5-5-7-11-7-18s2-13 7-18Z"></path>
+              <path d="M10.5 14h27M10.5 34h27"></path>
+            </svg>
+          </div>
+          <strong>الوقت هيظهر هنا</strong>
+          <span>ابحث عن أي مكان في العالم، واختار النتيجة الصحيحة لعرض الساعة وفرق التوقيت.</span>
+        </div>
+
+        <div class="clock-view" id="clockView" hidden>
+          <div class="clock-top">
+            <div class="clock-heading">
+              <div class="section-label">02 / الوقت الحالي</div>
+              <div class="place-title" id="selectedPlace">—</div>
+            </div>
+            <div class="format-switch" aria-label="تنسيق الوقت">
+              <button type="button" id="format24" class="active" aria-pressed="true">24H</button>
+              <button type="button" id="format12" aria-pressed="false">12H</button>
+            </div>
+          </div>
+
+          <div class="clocks">
+            <article class="clock-card">
+              <div class="clock-kicker">EGYPT · CAIRO</div>
+              <div class="clock-city">مصر</div>
+              <div class="clock-time" id="egyptTime">--:--:--</div>
+              <div class="clock-date" id="egyptDate">—</div>
+              <div class="clock-meta">
+                <span id="egyptZone">Africa/Cairo</span>
+                <span id="egyptOffset">UTC+02:00</span>
+              </div>
+            </article>
+            <article class="clock-card place">
+              <div class="clock-kicker">SELECTED LOCATION</div>
+              <div class="clock-city" id="placeCity">—</div>
+              <div class="clock-time" id="placeTime">--:--:--</div>
+              <div class="clock-date" id="placeDate">—</div>
+              <div class="clock-meta">
+                <span class="zone-code" id="placeZone">—</span>
+                <span id="placeOffset">—</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="difference">
+            <div>
+              <div class="difference-label">فرق التوقيت الآن</div>
+              <div class="difference-main" id="differenceText">—</div>
+            </div>
+            <div class="difference-number" id="differenceNumber">—</div>
+          </div>
+
+          <div class="location-note" id="locationNote">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <circle cx="10" cy="10" r="7.5"></circle><path d="M10 9v4M10 6.2v.2"></path>
+            </svg>
+            <span id="noteText">—</span>
+          </div>
+          <div class="actions">
+            <button class="secondary-btn" id="copyButton" type="button">نسخ مقارنة الوقت</button>
+            <button class="secondary-btn" id="newSearchButton" type="button">بحث جديد</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="credits">
+      <span>GEOCODING: <a href="https://github.com/komoot/photon" target="_blank" rel="noopener noreferrer">Photon</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></span>
+      <span>TIME ZONES: <a href="https://hourora.app/en/developers" target="_blank" rel="noopener noreferrer">Hourora · IANA tzdata</a></span>
+      <span>© 2026 MOHSEN TOOLS</span>
+    </div>
+    <footer>العناوين التي تبحث عنها تُرسل إلى خدمة البحث الجغرافي لإيجاد الإحداثيات. لا تدخل بيانات خاصة لا ترغب في مشاركتها.</footer>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const PHOTON_API = "https://photon.komoot.io/api/";
+      const HOURORA_API = "https://hourora.app/api/v1";
+      const EGYPT_ZONE = "Africa/Cairo";
+
+      const form = document.getElementById("searchForm");
+      const input = document.getElementById("locationInput");
+      const searchButton = document.getElementById("searchButton");
+      const statusBox = document.getElementById("status");
+      const candidatesBox = document.getElementById("candidates");
+      const emptyState = document.getElementById("emptyState");
+      const clockView = document.getElementById("clockView");
+      const format24 = document.getElementById("format24");
+      const format12 = document.getElementById("format12");
+
+      let activePlace = null;
+      let baseUtcMs = null;
+      let basePerformanceMs = null;
+      let timeFormat = "24";
+      let searchResults = [];
+
+      async function fetchJson(url) {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(function () { controller.abort(); }, 15000);
+        try {
+          const response = await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            cache: "no-store",
+            headers: { "Accept": "application/json" },
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            throw new Error("الخدمة رجعت استجابة غير متاحة (" + response.status + ").");
+          }
+          const data = await response.json();
+          if (data && data.error) {
+            throw new Error(data.error.message || "تعذر إكمال الطلب.");
+          }
+          return data;
+        } catch (error) {
+          if (error.name === "AbortError") {
+            throw new Error("الطلب استغرق وقتًا أطول من المعتاد. جرّب مرة أخرى.");
+          }
+          if (error instanceof TypeError) {
+            throw new Error("تعذر الاتصال بخدمة البحث أو التوقيت. تأكد من الإنترنت وحاول مرة أخرى.");
+          }
+          throw error;
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
+      }
+
+      function setStatus(message, type) {
+        statusBox.textContent = message || "";
+        statusBox.className = "status" + (type ? " " + type : "");
+      }
+
+      function uniqueParts(parts) {
+        return parts.filter(function (part, index) {
+          return part && parts.indexOf(part) === index;
+        });
+      }
+
+      function renderCandidates(features) {
+        candidatesBox.replaceChildren();
+        searchResults = features;
+        features.forEach(function (feature, index) {
+          const properties = feature.properties || {};
+          const title = properties.name || properties.street || properties.city || properties.postcode || properties.country || "مكان";
+          const detail = uniqueParts([
+            properties.housenumber,
+            properties.street,
+            properties.postcode,
+            properties.city,
+            properties.state,
+            properties.country
+          ]).filter(function (part) { return part !== title; }).join(" · ");
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "candidate";
+
+          const copy = document.createElement("span");
+          const strong = document.createElement("strong");
+          const small = document.createElement("small");
+          strong.textContent = title;
+          small.textContent = detail || properties.type || "نتيجة مطابقة";
+          copy.append(strong, small);
+
+          const arrow = document.createElement("span");
+          arrow.className = "candidate-arrow";
+          arrow.textContent = "←";
+          arrow.setAttribute("aria-hidden", "true");
+
+          button.append(copy, arrow);
+          button.addEventListener("click", function () { selectCandidate(index); });
+          candidatesBox.appendChild(button);
+        });
+      }
+
+      function candidateDisplayName(properties) {
+        const main = properties.name || properties.city || properties.street || properties.country || "المكان المحدد";
+        const details = uniqueParts([properties.city, properties.state, properties.country]).filter(function (part) {
+          return part !== main;
+        });
+        return [main].concat(details).join("، ");
+      }
+
+      async function selectCandidate(index) {
+        const feature = searchResults[index];
+        if (!feature || !feature.geometry || !Array.isArray(feature.geometry.coordinates)) {
+          setStatus("النتيجة ديه ما فيهاش إحداثيات كافية. اختار نتيجة تانية.", "error");
+          return;
+        }
+
+        candidatesBox.querySelectorAll("button").forEach(function (button) { button.disabled = true; });
+        setStatus("جاري تحديد المنطقة الزمنية ومقارنة الوقت مع مصر...");
+        const coordinates = feature.geometry.coordinates;
+        const longitude = Number(coordinates[0]);
+        const latitude = Number(coordinates[1]);
+
+        try {
+          const lookupUrl = HOURORA_API + "/lookup?lat=" + encodeURIComponent(latitude) + "&lng=" + encodeURIComponent(longitude);
+          const lookup = await fetchJson(lookupUrl);
+          const zone = lookup.zone || (lookup.city && lookup.city.zone);
+          if (!zone) {
+            throw new Error("لم نتمكن من تحديد المنطقة الزمنية لهذا المكان.");
+          }
+
+          const convertUrl = HOURORA_API + "/convert?from=" + encodeURIComponent(EGYPT_ZONE) + "&to=" + encodeURIComponent(zone);
+          const conversion = await fetchJson(convertUrl);
+          if (!conversion.utc || !conversion.from || !conversion.to) {
+            throw new Error("خدمة التوقيت لم ترجع بيانات مكتملة. جرّب مرة أخرى.");
+          }
+
+          const properties = feature.properties || {};
+          const nearestCity = lookup.city && lookup.city.name ? lookup.city.name : "أقرب مدينة مسجلة";
+          const distance = Number.isFinite(Number(lookup.distanceKm)) ? Number(lookup.distanceKm) : null;
+
+          activePlace = {
+            name: candidateDisplayName(properties),
+            city: properties.city || properties.name || nearestCity,
+            zone: zone,
+            nearestCity: nearestCity,
+            distanceKm: distance,
+            approximate: lookup.approximate !== false
+          };
+          baseUtcMs = Date.parse(conversion.utc);
+          if (!Number.isFinite(baseUtcMs)) baseUtcMs = Date.now();
+          basePerformanceMs = performance.now();
+
+          document.getElementById("selectedPlace").textContent = activePlace.name;
+          document.getElementById("placeCity").textContent = activePlace.name;
+          document.getElementById("placeZone").textContent = zone;
+          document.getElementById("noteText").textContent = buildLocationNote(activePlace);
+          emptyState.hidden = true;
+          clockView.hidden = false;
+          candidatesBox.replaceChildren();
+          setStatus("تم تحديد المكان بنجاح.", "ok");
+          renderClocks();
+        } catch (error) {
+          candidatesBox.querySelectorAll("button").forEach(function (button) { button.disabled = false; });
+          setStatus(error.message || "حصلت مشكلة أثناء تحديد المنطقة الزمنية.", "error");
+        }
+      }
+
+      function buildLocationNote(place) {
+        let message = "المنطقة الزمنية تم تحديدها باستخدام أقرب مدينة مسجلة (" + place.nearestCity + ").";
+        if (place.distanceKm !== null) {
+          message += " المسافة التقريبية: " + place.distanceKm.toFixed(1) + " كم.";
+        }
+        message += " قد تختلف النتيجة قليلًا قرب حدود المناطق الزمنية.";
+        return message;
+      }
+
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const query = input.value.trim();
+        if (query.length < 2) {
+          setStatus("اكتب ZIP Code أو عنوانًا أو اسم مدينة أولًا.", "error");
+          return;
+        }
+
+        searchButton.disabled = true;
+        searchButton.textContent = "جاري البحث...";
+        candidatesBox.replaceChildren();
+        searchResults = [];
+        setStatus("جاري البحث عن المكان...");
+        try {
+          const url = PHOTON_API + "?q=" + encodeURIComponent(query) + "&limit=7&lang=en";
+          const data = await fetchJson(url);
+          const features = Array.isArray(data.features) ? data.features.filter(function (feature) {
+            return feature.geometry && Array.isArray(feature.geometry.coordinates);
+          }) : [];
+
+          if (!features.length) {
+            setStatus("ملقيناش نتيجة واضحة. جرّب إضافة اسم المدينة أو الدولة للـ ZIP Code.", "error");
+          } else {
+            renderCandidates(features);
+            setStatus("اختار المكان الصحيح من النتائج (" + features.length + ").");
+          }
+        } catch (error) {
+          setStatus(error.message || "تعذر البحث عن المكان.", "error");
+        } finally {
+          searchButton.disabled = false;
+          searchButton.innerHTML = 'ابحث عن المكان <span aria-hidden="true">←</span>';
+        }
+      });
+
+      function currentUtcDate() {
+        if (baseUtcMs === null || basePerformanceMs === null) return new Date();
+        return new Date(baseUtcMs + (performance.now() - basePerformanceMs));
+      }
+
+      function getOffsetMinutes(date, zone) {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: zone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hourCycle: "h23"
+        }).formatToParts(date);
+        const values = {};
+        parts.forEach(function (part) {
+          if (part.type !== "literal") values[part.type] = part.value;
+        });
+        const asUtc = Date.UTC(
+          Number(values.year),
+          Number(values.month) - 1,
+          Number(values.day),
+          Number(values.hour),
+          Number(values.minute),
+          Number(values.second)
+        );
+        return Math.round((asUtc - Math.floor(date.getTime() / 1000) * 1000) / 60000);
+      }
+
+      function offsetLabel(minutes) {
+        const sign = minutes >= 0 ? "+" : "−";
+        const absolute = Math.abs(minutes);
+        const hours = String(Math.floor(absolute / 60)).padStart(2, "0");
+        const mins = String(absolute % 60).padStart(2, "0");
+        return "UTC" + sign + hours + ":" + mins;
+      }
+
+      function formatClock(date, zone) {
+        const locale = timeFormat === "24" ? "en-GB" : "en-US";
+        return new Intl.DateTimeFormat(locale, {
+          timeZone: zone,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: timeFormat === "12"
+        }).format(date);
+      }
+
+      function formatDate(date, zone) {
+        return new Intl.DateTimeFormat("ar-EG", {
+          timeZone: zone,
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        }).format(date);
+      }
+
+      function shortZoneName(date, zone) {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: zone,
+          timeZoneName: "short"
+        }).formatToParts(date);
+        const item = parts.find(function (part) { return part.type === "timeZoneName"; });
+        return item ? item.value : zone;
+      }
+
+      function durationLabel(minutes) {
+        const absolute = Math.abs(minutes);
+        const hours = Math.floor(absolute / 60);
+        const mins = absolute % 60;
+        if (hours && mins) return hours + " ساعة و" + mins + " دقيقة";
+        if (hours) return hours + (hours === 1 ? " ساعة" : " ساعات");
+        return mins + " دقيقة";
+      }
+
+      function renderClocks() {
+        if (!activePlace) return;
+        const now = currentUtcDate();
+        const egyptOffset = getOffsetMinutes(now, EGYPT_ZONE);
+        const placeOffset = getOffsetMinutes(now, activePlace.zone);
+        const difference = placeOffset - egyptOffset;
+
+        document.getElementById("egyptTime").textContent = formatClock(now, EGYPT_ZONE);
+        document.getElementById("egyptDate").textContent = formatDate(now, EGYPT_ZONE);
+        document.getElementById("egyptOffset").textContent = offsetLabel(egyptOffset);
+        document.getElementById("egyptZone").textContent = shortZoneName(now, EGYPT_ZONE);
+
+        document.getElementById("placeTime").textContent = formatClock(now, activePlace.zone);
+        document.getElementById("placeDate").textContent = formatDate(now, activePlace.zone);
+        document.getElementById("placeOffset").textContent = offsetLabel(placeOffset);
+        document.getElementById("placeZone").textContent = activePlace.zone + " · " + shortZoneName(now, activePlace.zone);
+
+        const mainText = difference === 0
+          ? "نفس التوقيت في مصر"
+          : difference > 0
+            ? "المكان سابق مصر بـ " + durationLabel(difference)
+            : "المكان متأخر عن مصر بـ " + durationLabel(difference);
+
+        document.getElementById("differenceText").textContent = mainText;
+        document.getElementById("differenceNumber").textContent = difference === 0
+          ? "00:00"
+          : (difference > 0 ? "+" : "−") + String(Math.floor(Math.abs(difference) / 60)).padStart(2, "0") + ":" + String(Math.abs(difference) % 60).padStart(2, "0");
+      }
+
+      format24.addEventListener("click", function () {
+        timeFormat = "24";
+        format24.classList.add("active");
+        format12.classList.remove("active");
+        format24.setAttribute("aria-pressed", "true");
+        format12.setAttribute("aria-pressed", "false");
+        renderClocks();
+      });
+
+      format12.addEventListener("click", function () {
+        timeFormat = "12";
+        format12.classList.add("active");
+        format24.classList.remove("active");
+        format12.setAttribute("aria-pressed", "true");
+        format24.setAttribute("aria-pressed", "false");
+        renderClocks();
+      });
+
+      document.getElementById("copyButton").addEventListener("click", async function () {
+        if (!activePlace) return;
+        const now = currentUtcDate();
+        const text = [
+          "Egypt: " + formatClock(now, EGYPT_ZONE) + " (" + offsetLabel(getOffsetMinutes(now, EGYPT_ZONE)) + ")",
+          activePlace.name + ": " + formatClock(now, activePlace.zone) + " (" + offsetLabel(getOffsetMinutes(now, activePlace.zone)) + ")",
+          "Time zone: " + activePlace.zone,
+          document.getElementById("differenceText").textContent
+        ].join("\n");
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus("تم نسخ مقارنة الوقت.", "ok");
+        } catch (error) {
+          setStatus("المتصفح منع النسخ التلقائي. حدّد النتيجة وانسخها يدويًا.", "error");
+        }
+      });
+
+      document.getElementById("newSearchButton").addEventListener("click", function () {
+        input.focus();
+        input.select();
+      });
+
+      window.setInterval(renderClocks, 1000);
+    })();
+  </script>
+</body>
+</html>

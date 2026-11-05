@@ -225,6 +225,7 @@ function createPlaylist(){
  $('newPlaylistName').value='';$('createPlaylistPanel').hidden=true;
  renderPlaylistNav();
  $('targetPlaylistSelect').value=playlist.id;
+ renderPlaylistControls();
  if(selectedTrackPaths.size)$('addPlaylistPanel').hidden=false;
 }
 function addSelectedToPlaylist(){

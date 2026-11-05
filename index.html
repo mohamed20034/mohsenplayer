@@ -43,7 +43,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
 .player{position:fixed;z-index:5;left:0;right:0;bottom:0;height:88px;background:#181818;border-top:1px solid #292929;display:grid;grid-template-columns:minmax(180px,1fr) minmax(260px,1.3fr) minmax(180px,1fr);gap:20px;align-items:center;padding:0 18px}
 .now{display:flex;align-items:center;gap:12px;min-width:0}.now-cover{width:54px;height:54px;object-fit:cover;border-radius:4px;background:#303030;display:grid;place-items:center;color:var(--green);flex:none}.now-meta{min-width:0}.now-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.now-artist{font-size:10px;color:var(--muted);margin-top:5px}.like{border:0;background:none;color:var(--green);font-size:17px}
 .center{min-width:0}.controls{display:flex;justify-content:center;align-items:center;gap:17px}.ctrl{border:0;background:none;color:#b3b3b3;font-size:17px;padding:2px}.ctrl:hover,.ctrl.on{color:var(--green)}.play{width:32px;height:32px;border:0;border-radius:50%;background:#fff;color:#000;font-size:14px}.seekline{display:flex;align-items:center;gap:9px;margin-top:9px}.time{font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums}.range{appearance:none;height:4px;background:#5e5e5e;border-radius:9px;outline:none;width:100%;cursor:pointer}.range::-webkit-slider-thumb{appearance:none;width:11px;height:11px;border-radius:50%;background:#fff}.range:hover::-webkit-slider-thumb{background:var(--green)}
-.extras{display:flex;justify-content:flex-end;align-items:center;gap:12px;color:var(--muted)}.volume{width:90px}.mobile-menu{display:none}
+.extras{display:flex;justify-content:flex-end;align-items:center;gap:10px;color:var(--muted)}.volume{width:90px}.mute-button{border:0;background:transparent;color:#b3b3b3;font-size:19px;padding:5px;line-height:1;cursor:pointer}.mute-button:hover{color:#fff}.mute-button:focus-visible{outline:2px solid var(--green);border-radius:5px}.mobile-menu{display:none}
 @media(max-width:850px){.app{grid-template-columns:75px minmax(0,1fr)}.sidebar{padding:20px 8px;align-items:center}.logo{font-size:0;padding:0}.logo:after{content:'P.';font-size:20px;color:var(--green)}.nav-item{justify-content:center;padding:5px}.nav-label,.library-head span,.library-head button,.playlist-link{display:none}.library-head{justify-content:center}.player{grid-template-columns:minmax(120px,1fr) minmax(220px,1.3fr);gap:12px}.extras{display:none}}
 @media(max-width:580px){.app{display:block;padding:0 0 95px}.sidebar{display:none}.main{border-radius:0;min-height:100vh}.topbar{height:55px;padding:0 16px}.content{padding:15px 15px 25px}.hero{gap:15px;margin:12px 0 20px}.hero-art{width:112px;height:112px;font-size:43px}.hero-copy h1{font-size:35px;margin:8px 0}.hero-copy p{font-size:10px}.hero-copy .muted{display:none}.mobile-playlists{display:block;margin:0 0 14px}.list-head,.song{grid-template-columns:28px minmax(0,1fr) 55px;gap:7px;padding:8px 5px}.playlist-actions{gap:7px}.playlist-actions button,.playlist-panel button{padding:9px 11px;font-size:10px}.selection-count{width:100%;margin:0}.album{display:none}.song-cover{width:36px;height:36px}.player{height:84px;padding:7px 10px;grid-template-columns:110px minmax(0,1fr);gap:8px}.now-cover{width:39px;height:39px}.now{gap:7px}.now-name{font-size:10px}.now-artist{font-size:9px}.like{display:none}.controls{gap:12px}.ctrl{font-size:14px}.play{width:29px;height:29px}.time{font-size:8px}.seekline{gap:5px;margin-top:6px}.toolbar{gap:13px}.big-play{width:48px;height:48px}}
 </style>
@@ -95,7 +95,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
 <footer class="player">
  <div class="now"><div class="now-cover" id="nowCover">♫</div><div class="now-meta"><div class="now-name" id="nowName">Choose a track</div><div class="now-artist" id="nowArtist">PLAYER</div></div><button class="like" id="like" title="Like">♡</button></div>
  <div class="center"><div class="controls"><button class="ctrl" id="shuffleSmall" title="Shuffle">⤨</button><button class="ctrl" id="prev" title="Previous">|◀</button><button class="play" id="play" title="Play">▶</button><button class="ctrl" id="next" title="Next">▶|</button><button class="ctrl" id="repeatSmall" title="Repeat">↻</button></div><div class="seekline"><span class="time" id="currentTime">0:00</span><input class="range" id="seek" type="range" min="0" max="1000" value="0"><span class="time" id="duration">0:00</span></div></div>
- <div class="extras"><span>♫</span><input class="range volume" id="volume" type="range" min="0" max="1" step=".01" value=".8"></div>
+ <div class="extras" id="volumeControls"><button class="mute-button" id="muteToggle" type="button" title="Mute" aria-label="Mute">🔊</button><input class="range volume" id="volume" type="range" min="0" max="1" step=".01" value=".8" aria-label="Volume"></div>
 </footer>
 <audio id="audio" preload="metadata"></audio>
 <script>
@@ -255,15 +255,46 @@ $('targetPlaylistSelect').addEventListener('change',renderPlaylistControls);
 $('confirmAddToPlaylist').addEventListener('click',addSelectedToPlaylist);
 $('cancelAddToPlaylist').addEventListener('click',()=>{$('addPlaylistPanel').hidden=true;selectedTrackPaths.clear();render();});
 
-$('volume').oninput=e=>audio.volume=Number(e.target.value);
-audio.volume=.8;
-$('volume').addEventListener('wheel',event=>{
+let lastVolume=.8;
+audio.volume=lastVolume;
+$('volume').value=String(lastVolume);
+function syncVolumeUI(){
+ const muted=audio.muted||audio.volume===0;
+ $('muteToggle').textContent=muted?'🔇':'🔊';
+ $('muteToggle').title=muted?'Unmute':'Mute';
+ $('muteToggle').setAttribute('aria-label',muted?'Unmute':'Mute');
+ $('volume').value=String(audio.volume);
+ $('volume').style.opacity=muted?'.55':'1';
+}
+$('volume').addEventListener('input',event=>{
+ const value=Math.max(0,Math.min(1,Number(event.target.value)));
+ audio.muted=false;
+ audio.volume=value;
+ if(value>0)lastVolume=value;
+ syncVolumeUI();
+});
+$('muteToggle').addEventListener('click',()=>{
+ if(audio.muted||audio.volume===0){
+  audio.muted=false;
+  audio.volume=lastVolume>0?lastVolume:.8;
+ }else{
+  if(audio.volume>0)lastVolume=audio.volume;
+  audio.muted=true;
+ }
+ syncVolumeUI();
+});
+const volumeControls=$('volumeControls');
+volumeControls.addEventListener('wheel',event=>{
  event.preventDefault();
- const step=.05;
- const next=Math.max(0,Math.min(1,audio.volume+(event.deltaY<0?step:-step)));
+ const direction=Math.sign(event.deltaY||event.deltaX);
+ if(!direction)return;
+ audio.muted=false;
+ const next=Math.max(0,Math.min(1,audio.volume+(direction<0?.05:-.05)));
  audio.volume=next;
- $('volume').value=String(next);
-},{passive:false});
+ if(next>0)lastVolume=next;
+ syncVolumeUI();
+},{passive:false,capture:true});
+syncVolumeUI();
 $('seek').oninput=e=>{if(Number.isFinite(audio.duration))audio.currentTime=Number(e.target.value)/1000*audio.duration};
 audio.ontimeupdate=()=>{$('currentTime').textContent=fmt(audio.currentTime);$('duration').textContent=fmt(audio.duration);$('seek').value=audio.duration?audio.currentTime/audio.duration*1000:0};
 audio.onplay=setNow;audio.onpause=setNow;audio.onended=()=>repeat?(audio.currentTime=0,audio.play()):next();

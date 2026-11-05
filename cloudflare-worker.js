@@ -5,17 +5,6 @@ const ALLOWED_ORIGIN = "https://mohamed20034.github.io";
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
 const EXTENSIONS = new Set([".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".opus", ".webm"]);
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-      "Vary": "Origin"
-    }
-  });
-}
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -24,6 +13,16 @@ function corsHeaders() {
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
   };
+}
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...corsHeaders(),
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store"
+    }
+  });
 }
 function secureEqual(a, b) {
   if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
@@ -61,7 +60,7 @@ async function github(path, token, options = {}) {
     ...fetchOptions,
     headers: {
       "Authorization": "Bearer " + token,
-      "User-Agent": "MOHSEN-PLAYER-Cloudflare-Worker/1.0",
+      "User-Agent": "PLAYER-Cloudflare-Worker/1.0",
       "Accept": "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       "Content-Type": "application/json",
@@ -80,7 +79,6 @@ async function github(path, token, options = {}) {
       acceptedPermissions: response.headers.get("X-Accepted-GitHub-Permissions"),
       requestId: response.headers.get("X-GitHub-Request-Id"),
       rateLimitRemaining: response.headers.get("X-RateLimit-Remaining"),
-      rateLimitReset: response.headers.get("X-RateLimit-Reset"),
       documentationUrl: data.documentation_url || null,
       body: responseText.slice(0, 700)
     };
@@ -96,6 +94,23 @@ async function getContent(path, token) {
     throw error;
   }
 }
+async function putTextFile(path, token, content, message, sha = null) {
+  const payload = {
+    message,
+    branch: BRANCH,
+    content: encodeTextBase64(content)
+  };
+  if (sha) payload.sha = sha;
+  return github(path, token, { method: "PUT", body: JSON.stringify(payload) });
+}
+function parseJsonFile(file, fallback) {
+  if (!file) return fallback;
+  return JSON.parse(decodeBase64Text(file.content));
+}
+function safePlaylistName(value) {
+  return String(value || "").trim().replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").slice(0, 80);
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin");
@@ -104,36 +119,71 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     if (url.pathname === "/health" && request.method === "GET") {
-      return new Response(JSON.stringify({ ok: true, service: "mohsen-player-uploader", version: "diagnostic-v6" }), {
-        headers: { ...corsHeaders(), "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
-      });
+      return json({ ok: true, service: "player-uploader", version: "playlists-v1" });
     }
+
     const suppliedKey = request.headers.get("X-Upload-Key") || "";
+    if (!env.UPLOAD_KEY || !secureEqual(suppliedKey, env.UPLOAD_KEY)) {
+      return json({ error: "Upload key is incorrect." }, 401);
+    }
+    if (!env.GH_TOKEN) return json({ error: "Worker is missing the GH_TOKEN secret." }, 500);
+
     if (url.pathname === "/diagnostics" && request.method === "GET") {
-      if (!env.UPLOAD_KEY || !secureEqual(suppliedKey, env.UPLOAD_KEY)) return json({ error: "Upload key is incorrect." }, 401);
-      if (!env.GH_TOKEN) return json({ error: "Worker is missing the GH_TOKEN secret." }, 500);
       try {
         const file = await getContent("tracks.json", env.GH_TOKEN);
-        if (!file) return json({ ok: false, stage: "reading_tracks_json", error: "GitHub token could not find tracks.json in the configured repository." }, 404);
-        return json({ ok: true, version: "diagnostic-v6", repository: OWNER + "/" + REPO, permissionCheck: "Contents read succeeded", tracksJsonSha: file.sha });
+        if (!file) return json({ ok: false, error: "tracks.json was not found." }, 404);
+        return json({ ok: true, repository: OWNER + "/" + REPO, permissionCheck: "Contents read succeeded", version: "playlists-v1" });
       } catch (error) {
-        return json({
-          ok: false,
-          error: error.message || "GitHub permission check failed.",
-          stage: "reading_tracks_json",
-          githubDetails: error.githubDetails || null
-        }, error.status && error.status < 500 ? error.status : 500);
+        return json({ ok: false, error: error.message, stage: "reading_tracks_json", githubDetails: error.githubDetails || null }, error.status || 500);
       }
     }
 
-    if (url.pathname !== "/upload" || request.method !== "POST") return json({ error: "Not found." }, 404);
-    if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
+    if (url.pathname === "/library" && request.method === "GET") {
+      try {
+        const [tracksFile, playlistsFile] = await Promise.all([
+          getContent("tracks.json", env.GH_TOKEN),
+          getContent("playlists.json", env.GH_TOKEN)
+        ]);
+        const tracksData = parseJsonFile(tracksFile, { tracks: [] });
+        const playlistsData = parseJsonFile(playlistsFile, { playlists: [] });
+        return json({
+          ok: true,
+          tracks: Array.isArray(tracksData.tracks) ? tracksData.tracks : [],
+          playlists: Array.isArray(playlistsData.playlists) ? playlistsData.playlists : []
+        });
+      } catch (error) {
+        return json({ error: error.message || "Could not load the library.", githubDetails: error.githubDetails || null }, error.status || 500);
+      }
+    }
 
-    if (!env.UPLOAD_KEY || !secureEqual(suppliedKey, env.UPLOAD_KEY)) return json({ error: "Upload key is incorrect." }, 401);
-    if (!env.GH_TOKEN) return json({ error: "Worker is missing the GH_TOKEN secret." }, 500);
+    if (url.pathname === "/playlists" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: "Request body must be valid JSON." }, 400); }
+      const name = safePlaylistName(body.name);
+      if (!name) return json({ error: "Playlist name is required." }, 400);
+      try {
+        const file = await getContent("playlists.json", env.GH_TOKEN);
+        const data = parseJsonFile(file, { playlists: [] });
+        if (!Array.isArray(data.playlists)) data.playlists = [];
+        const duplicate = data.playlists.find(p => String(p.name || "").toLocaleLowerCase() === name.toLocaleLowerCase());
+        if (duplicate) return json({ ok: true, playlist: duplicate, alreadyExists: true });
+        const playlist = { id: crypto.randomUUID(), name, tracks: [] };
+        data.playlists.push(playlist);
+        await putTextFile("playlists.json", env.GH_TOKEN, JSON.stringify(data, null, 2), "Create playlist: " + name, file ? file.sha : null);
+        return json({ ok: true, playlist });
+      } catch (error) {
+        return json({ error: error.message || "Could not create playlist.", stage: "creating_playlist", githubDetails: error.githubDetails || null }, error.status || 500);
+      }
+    }
+
+    if (url.pathname !== "/upload" || request.method !== "POST") {
+      return json({ error: "Not found." }, 404);
+    }
 
     const declaredLength = Number(request.headers.get("Content-Length") || 0);
-    if (declaredLength > 30 * 1024 * 1024) return json({ error: "Request is too large. Maximum audio size is 20 MB." }, 413);
+    if (declaredLength > 30 * 1024 * 1024) {
+      return json({ error: "Request is too large. Maximum audio size is 20 MB." }, 413);
+    }
 
     let body;
     try { body = await request.json(); } catch (_) { return json({ error: "Request body must be valid JSON." }, 400); }
@@ -142,18 +192,34 @@ export default {
     const album = String(body.album || "Singles").trim().slice(0, 180);
     const originalName = String(body.fileName || "track.mp3").trim();
     const fileBase64 = String(body.fileBase64 || "").replace(/\s/g, "");
+    const playlistId = String(body.playlistId || "").trim();
     const match = originalName.match(/\.[a-z0-9]+$/i);
     const extension = match ? match[0].toLowerCase() : ".mp3";
+
     if (!title) return json({ error: "Track title is required." }, 400);
     if (!EXTENSIONS.has(extension)) return json({ error: "Unsupported audio format." }, 415);
-    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(fileBase64) || fileBase64.length < 8) return json({ error: "Audio data is not valid base64." }, 400);
-    const approximateBytes = Math.floor(fileBase64.length * 3 / 4) - (fileBase64.endsWith("==") ? 2 : fileBase64.endsWith("=") ? 1 : 0);
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(fileBase64) || fileBase64.length < 8) {
+      return json({ error: "Audio data is not valid base64." }, 400);
+    }
+    const approximateBytes = Math.floor(fileBase64.length * 3 / 4) -
+      (fileBase64.endsWith("==") ? 2 : fileBase64.endsWith("=") ? 1 : 0);
     if (approximateBytes > MAX_AUDIO_BYTES) return json({ error: "Audio file exceeds the 20 MB limit." }, 413);
 
-    const base = cleanName(originalName);
-    let filePath = "music/" + base + extension;
-    let stage = "checking_existing_filename";
+    let stage = "checking_playlist";
+    let playlistFile = null;
+    let playlistsData = { playlists: [] };
     try {
+      if (playlistId) {
+        playlistFile = await getContent("playlists.json", env.GH_TOKEN);
+        playlistsData = parseJsonFile(playlistFile, { playlists: [] });
+        if (!Array.isArray(playlistsData.playlists)) playlistsData.playlists = [];
+        const selected = playlistsData.playlists.find(p => p.id === playlistId);
+        if (!selected) return json({ error: "Selected playlist was not found. Refresh the upload page and choose again." }, 404);
+      }
+
+      const base = cleanName(originalName);
+      let filePath = "music/" + base + extension;
+      stage = "checking_existing_filename";
       let collision = await getContent(filePath, env.GH_TOKEN);
       let suffix = 2;
       while (collision && suffix < 100) {
@@ -170,29 +236,29 @@ export default {
       });
 
       stage = "reading_tracks_json";
-      const catalogueFile = await getContent("tracks.json", env.GH_TOKEN);
-      if (!catalogueFile) throw new Error("Audio was uploaded, but tracks.json was not found.");
-      const catalogue = JSON.parse(decodeBase64Text(catalogueFile.content));
-      if (!Array.isArray(catalogue.tracks)) catalogue.tracks = [];
-      catalogue.tracks.push({ title, artist, album, src: filePath });
+      const tracksFile = await getContent("tracks.json", env.GH_TOKEN);
+      const tracksData = parseJsonFile(tracksFile, { tracks: [] });
+      if (!Array.isArray(tracksData.tracks)) tracksData.tracks = [];
+      tracksData.tracks.push({ title, artist, album, src: filePath });
 
       stage = "updating_tracks_json";
-      await github("tracks.json", env.GH_TOKEN, {
-        method: "PUT",
-        body: JSON.stringify({
-          message: "Update music catalogue: " + title,
-          branch: BRANCH,
-          sha: catalogueFile.sha,
-          content: encodeTextBase64(JSON.stringify(catalogue, null, 2))
-        })
-      });
-      return json({ ok: true, track: { title, artist, album, src: filePath } });
+      await putTextFile("tracks.json", env.GH_TOKEN, JSON.stringify(tracksData, null, 2), "Add track: " + title, tracksFile ? tracksFile.sha : null);
+
+      if (playlistId) {
+        stage = "updating_playlists_json";
+        const selected = playlistsData.playlists.find(p => p.id === playlistId);
+        if (!Array.isArray(selected.tracks)) selected.tracks = [];
+        if (!selected.tracks.includes(filePath)) selected.tracks.push(filePath);
+        await putTextFile("playlists.json", env.GH_TOKEN, JSON.stringify(playlistsData, null, 2), "Add track to playlist: " + selected.name, playlistFile ? playlistFile.sha : null);
+      }
+
+      return json({ ok: true, track: { title, artist, album, src: filePath, playlistId } });
     } catch (error) {
       return json({
         error: error.message || "Upload failed.",
         stage,
         githubDetails: error.githubDetails || null,
-        audioMayAlreadyBeUploaded: stage === "reading_tracks_json" || stage === "updating_tracks_json"
+        audioMayAlreadyBeUploaded: ["reading_tracks_json", "updating_tracks_json", "updating_playlists_json"].includes(stage)
       }, error.status && error.status < 500 ? error.status : 500);
     }
   }

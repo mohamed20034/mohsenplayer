@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121212">
-<title>MOHSEN PLAYER · Admin</title>
+<title>PLAYER · Admin</title>
 <style>
 :root{color-scheme:dark;--green:#1ed760;--muted:#aaa;--panel:#181818;--line:#333}
 *{box-sizing:border-box}
@@ -21,6 +21,17 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 .note{background:#252525;border:1px solid #383838;border-radius:9px;padding:13px;margin:15px 0;font-size:12px;line-height:1.65;color:#ddd}
 .small{font-size:10px;color:#888;line-height:1.55}.fieldrow{display:flex;align-items:center;justify-content:space-between;gap:7px}
 #queue{display:grid;gap:10px;margin-top:15px}
+.playlist-tools{background:#202020;border:1px solid #383838;border-radius:10px;padding:13px;margin:14px 0}
+.playlist-tools-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.playlist-tools-head strong{font-size:13px}
+.playlist-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.playlist-chip{background:#303030;color:#ddd;border-radius:99px;padding:6px 10px;font-size:10px}
+.playlist-create-form{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+.playlist-create-form input{min-width:0}
+.playlist-create-form button{margin:0}
+.track-fields{grid-template-columns:1.15fr 1fr 1fr 1fr}
+.track-fields select{margin-top:5px;min-width:0;width:100%;font:inherit;font-size:12px;padding:9px;border:1px solid #444;border-radius:8px;background:#242424;color:#fff}
+@media(max-width:620px){.playlist-create-form{grid-template-columns:1fr}.playlist-create-form button{width:100%}}
 .track-card{background:#202020;border:1px solid #343434;border-radius:10px;padding:12px;min-width:0}
 .track-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
 .track-file{min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:700}
@@ -39,7 +50,7 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 </head>
 <body>
 <main class="card">
-<div class="brand">MOHSEN<span>.</span>PLAYER / ADMIN</div>
+<div class="brand">PLAYER<span>.</span>ADMIN</div>
 <h1>Upload to your library</h1>
 <p class="muted">Bulk upload with automatic title and artist detection. Arabic and English metadata are supported.</p>
 
@@ -56,6 +67,15 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 <div class="note"><b>Worker connected.</b> Select several audio files at once. We'll read embedded MP3 tags when available, otherwise detect artist and title from filenames. You can edit every item before uploading.</div>
 <button class="secondary full" id="testGithub" type="button">TEST GITHUB PERMISSIONS</button>
 <div class="small" id="githubTestResult"></div>
+<div class="playlist-tools">
+ <div class="playlist-tools-head"><strong>Your Playlists</strong><button class="secondary inline" id="toggleCreatePlaylist" type="button">＋ CREATE PLAYLIST</button></div>
+ <div class="playlist-list" id="playlistList"><span class="small">Loading playlists...</span></div>
+ <div class="playlist-create-form hidden" id="playlistCreateForm">
+  <input id="newPlaylistName" type="text" maxlength="80" placeholder="Playlist name / اسم البلاي ليست" dir="auto">
+  <button id="createPlaylistBtn" type="button">CREATE</button>
+ </div>
+ <p class="small">Create playlists here, then choose a playlist separately for each song in the upload list below.</p>
+</div>
 <label for="audioFiles">AUDIO FILES · SELECT MULTIPLE · MAX 20 MB EACH</label>
 <div class="dropzone">
 <input id="audioFiles" type="file" multiple accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.webm">
@@ -74,13 +94,13 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 </section>
 
 <div class="status" id="status" role="status" aria-live="polite"></div>
-<a class="back" href="./index.html">← Back to MOHSEN PLAYER</a>
+<a class="back" href="./index.html">← Back to PLAYER</a>
 </main>
 <script>
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
-let workerUrl='',uploadKey='',queue=[],nextId=1,isUploading=false;
+let workerUrl='',uploadKey='',queue=[],playlists=[],nextId=1,isUploading=false;
 const MAX_BYTES=20*1024*1024;
 const ALLOWED_EXTENSIONS=new Set(['mp3','wav','m4a','ogg','flac','aac','opus','webm']);
 
@@ -199,6 +219,7 @@ function renderQueue(){
     '<label>Title<input class="q-title" type="text" dir="auto"></label>'+
     '<label>Artist<input class="q-artist" type="text" dir="auto"></label>'+
     '<label>Album<input class="q-album" type="text" dir="auto"></label>'+
+    '<label>Playlist<select class="q-playlist" aria-label="Choose playlist"><option value="">No playlist</option></select></label>'+
    '</div><div class="track-status"></div>';
   card.querySelector('.track-file').textContent=item.file.name;
   card.querySelector('.track-meta').textContent=(item.file.size/1024/1024).toFixed(2)+' MB · '+item.detectSource;
@@ -209,6 +230,14 @@ function renderQueue(){
   title.addEventListener('input',()=>item.title=title.value);
   artist.addEventListener('input',()=>item.artist=artist.value);
   album.addEventListener('input',()=>item.album=album.value);
+  const playlistSelect=card.querySelector('.q-playlist');
+  playlists.forEach(playlist=>{
+   const option=document.createElement('option');
+   option.value=playlist.id;option.textContent=playlist.name;
+   playlistSelect.appendChild(option);
+  });
+  playlistSelect.value=item.playlistId||'';
+  playlistSelect.addEventListener('change',()=>item.playlistId=playlistSelect.value);
   card.querySelector('.remove').addEventListener('click',()=>{
    if(isUploading)return;
    queue=queue.filter(x=>x.id!==item.id);renderQueue();
@@ -239,14 +268,52 @@ $('connectBtn').addEventListener('click',async()=>{
   if(!response.ok)throw new Error('Health check returned HTTP '+response.status+'.');
   const data=await response.json();
   if(!data.ok)throw new Error('Worker health check did not pass.');
+  const libraryResponse=await fetch(workerUrl+'/library',{headers:{'X-Upload-Key':uploadKey}});
+  const libraryData=await libraryResponse.json();
+  if(!libraryResponse.ok||!libraryData.ok)throw new Error(libraryData.error||'Could not load playlists.');
+  playlists=Array.isArray(libraryData.playlists)?libraryData.playlists:[];
+  renderPlaylists();
   $('settings').classList.add('hidden');$('upload').classList.remove('hidden');
-  status('Worker is online. Select multiple tracks to build your upload queue.');
+  status('Worker is online. Create a playlist or choose one for each track.');
  }catch(error){status(error.message||'Could not connect to the Worker.',true);}
  finally{$('connectBtn').disabled=false;}
 });
+function renderPlaylists(){
+ const host=$('playlistList');host.innerHTML='';
+ if(!playlists.length){const empty=document.createElement('span');empty.className='small';empty.textContent='No playlists yet. Create your first one.';host.appendChild(empty);}
+ playlists.forEach(playlist=>{
+  const chip=document.createElement('span');chip.className='playlist-chip';
+  chip.textContent=playlist.name+' · '+(Array.isArray(playlist.tracks)?playlist.tracks.length:0);
+  host.appendChild(chip);
+ });
+ renderQueue();
+}
+$('toggleCreatePlaylist').addEventListener('click',()=>{
+ $('playlistCreateForm').classList.toggle('hidden');
+ if(!$('playlistCreateForm').classList.contains('hidden'))$('newPlaylistName').focus();
+});
+$('createPlaylistBtn').addEventListener('click',async()=>{
+ const name=$('newPlaylistName').value.trim(),button=$('createPlaylistBtn');
+ if(!name){status('Enter a playlist name.',true);return;}
+ button.disabled=true;status('Creating playlist...');
+ try{
+  const response=await fetch(workerUrl+'/playlists',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','X-Upload-Key':uploadKey},
+   body:JSON.stringify({name})
+  });
+  const result=await response.json();
+  if(!response.ok||!result.ok)throw new Error(result.error||'Could not create playlist.');
+  if(!playlists.some(p=>p.id===result.playlist.id))playlists.push(result.playlist);
+  $('newPlaylistName').value='';$('playlistCreateForm').classList.add('hidden');
+  renderPlaylists();
+  status(result.alreadyExists?'That playlist already exists. It is ready to use.':'Playlist created: '+result.playlist.name);
+ }catch(error){status(error.message||'Could not create playlist.',true);}
+ finally{button.disabled=false;}
+});
 $('disconnectBtn').addEventListener('click',()=>{
  if(isUploading)return;
- workerUrl='';uploadKey='';queue=[];
+ workerUrl='';uploadKey='';queue=[];playlists=[];
  $('workerUrl').value='';$('uploadKey').value='';
  $('upload').classList.add('hidden');$('settings').classList.remove('hidden');
  $('queue').innerHTML='';$('audioFiles').value='';
@@ -289,7 +356,7 @@ $('audioFiles').addEventListener('change',async event=>{
  status('Detecting track information for '+accepted.length+' file(s)...');
  const detected=await Promise.all(accepted.map(async file=>{
   const meta=await detectMetadata(file);
-  return {id:nextId++,file,title:meta.title,artist:meta.artist,album:meta.album,detectSource:meta.source,state:'ready',message:''};
+  return {id:nextId++,file,title:meta.title,artist:meta.artist,album:meta.album,playlistId:'',detectSource:meta.source,state:'ready',message:''};
  }));
  queue.push(...detected);
  renderQueue();
@@ -311,6 +378,7 @@ async function uploadOne(item){
   title:normaliseText(item.title)||removeExtension(item.file.name),
   artist:normaliseText(item.artist)||'Unknown artist',
   album:normaliseText(item.album)||'Singles',
+  playlistId:item.playlistId||'',
   fileName:item.file.name,
   fileBase64:encodeFile(await item.file.arrayBuffer())
  };

@@ -255,7 +255,15 @@ $('targetPlaylistSelect').addEventListener('change',renderPlaylistControls);
 $('confirmAddToPlaylist').addEventListener('click',addSelectedToPlaylist);
 $('cancelAddToPlaylist').addEventListener('click',()=>{$('addPlaylistPanel').hidden=true;selectedTrackPaths.clear();render();});
 
-$('volume').oninput=e=>audio.volume=Number(e.target.value);audio.volume=.8;
+$('volume').oninput=e=>audio.volume=Number(e.target.value);
+audio.volume=.8;
+$('volume').addEventListener('wheel',event=>{
+ event.preventDefault();
+ const step=.05;
+ const next=Math.max(0,Math.min(1,audio.volume+(event.deltaY<0?step:-step)));
+ audio.volume=next;
+ $('volume').value=String(next);
+},{passive:false});
 $('seek').oninput=e=>{if(Number.isFinite(audio.duration))audio.currentTime=Number(e.target.value)/1000*audio.duration};
 audio.ontimeupdate=()=>{$('currentTime').textContent=fmt(audio.currentTime);$('duration').textContent=fmt(audio.duration);$('seek').value=audio.duration?audio.currentTime/audio.duration*1000:0};
 audio.onplay=setNow;audio.onpause=setNow;audio.onended=()=>repeat?(audio.currentTime=0,audio.play()):next();

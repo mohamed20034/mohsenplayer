@@ -178,6 +178,7 @@ function render(){
    '<span class="album">'+esc(t.album||'Singles')+'</span><span class="length" data-duration="'+i+'">--:--</span></div>';
  }).join('');
  document.querySelectorAll('.song').forEach(el=>el.addEventListener('click',()=>playAt(Number(el.dataset.i))));
+ document.querySelectorAll('.select-cell').forEach(el=>el.addEventListener('click',event=>event.stopPropagation()));
  document.querySelectorAll('.song-select').forEach(el=>{
   el.addEventListener('click',event=>event.stopPropagation());
   el.addEventListener('change',()=>{

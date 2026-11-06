@@ -605,6 +605,12 @@
       "artist": "Jadal",
       "album": "El Makina",
       "src": "music/56-El-Makina.mp3"
+    },
+    {
+      "title": "Ya Ahla O'yoon",
+      "artist": "Jadal",
+      "album": "Arabic Rocks",
+      "src": "music/54-Ya-Ahla-O-yoon.mp3"
     }
   ]
 }

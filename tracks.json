@@ -311,6 +311,12 @@
       "artist": "The Neighbourhood",
       "album": "Wiped Out!",
       "src": "music/Baby-Came-Home-2-_-Valentines.mp3"
+    },
+    {
+      "title": "Into It",
+      "artist": "Chase Atlantic",
+      "album": "Chase Atlantic",
+      "src": "music/Into-It.mp3"
     }
   ]
 }

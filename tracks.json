@@ -431,6 +431,12 @@
       "artist": "Wham!",
       "album": "All-Star Christmas",
       "src": "music/Last-Christmas---Single-Version.mp3"
+    },
+    {
+      "title": "Placebo",
+      "artist": "Lege-Cy",
+      "album": "Placebo",
+      "src": "music/1-Placebo.mp3"
     }
   ]
 }

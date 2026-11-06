@@ -599,6 +599,12 @@
       "artist": "Jadal",
       "album": "Arabic Rocks",
       "src": "music/53-Al-Tobah.mp3"
+    },
+    {
+      "title": "El Makina",
+      "artist": "Jadal",
+      "album": "El Makina",
+      "src": "music/56-El-Makina.mp3"
     }
   ]
 }

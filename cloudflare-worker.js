@@ -8,7 +8,7 @@ const EXTENSIONS = new Set([".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".o
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Upload-Key",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
@@ -110,6 +110,23 @@ function parseJsonFile(file, fallback) {
 function safePlaylistName(value) {
   return String(value || "").trim().replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").slice(0, 80);
 }
+async function mutatePlaylists(token, update, message) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const file = await getContent("playlists.json", token);
+    const data = parseJsonFile(file, { playlists: [] });
+    if (!Array.isArray(data.playlists)) data.playlists = [];
+    const outcome = update(data.playlists);
+    if (!outcome.changed) return { playlists: data.playlists, result: outcome.result };
+    try {
+      await putTextFile("playlists.json", token, JSON.stringify(data, null, 2), message, file ? file.sha : null);
+      return { playlists: data.playlists, result: outcome.result };
+    } catch (error) {
+      if ((error.status === 409 || error.status === 422) && attempt < 3) continue;
+      throw error;
+    }
+  }
+  throw new Error("Playlist data changed repeatedly. Please retry.");
+}
 
 export default {
   async fetch(request, env) {
@@ -119,14 +136,87 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
     if (url.pathname === "/health" && request.method === "GET") {
-      return json({ ok: true, service: "player-uploader", version: "playlists-v1" });
+      return json({ ok: true, service: "player-uploader", version: "shared-playlists-v2" });
+    }
+
+    if (!env.GH_TOKEN) return json({ error: "Worker is missing the GH_TOKEN secret." }, 500);
+
+    // Public shared playlists: no admin key is needed for the PLAYER website.
+    if (url.pathname === "/playlists" && request.method === "GET") {
+      try {
+        const file = await getContent("playlists.json", env.GH_TOKEN);
+        const data = parseJsonFile(file, { playlists: [] });
+        return json({ ok: true, playlists: Array.isArray(data.playlists) ? data.playlists : [] });
+      } catch (error) {
+        return json({ error: error.message || "Could not load shared playlists.", githubDetails: error.githubDetails || null }, error.status || 500);
+      }
+    }
+
+    if (url.pathname === "/playlists" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: "Request body must be valid JSON." }, 400); }
+      const name = safePlaylistName(body.name);
+      if (!name) return json({ error: "Playlist name is required." }, 400);
+      try {
+        const updated = await mutatePlaylists(env.GH_TOKEN, list => {
+          const duplicate = list.find(p => String(p.name || "").toLocaleLowerCase() === name.toLocaleLowerCase());
+          if (duplicate) return { changed: false, result: { playlist: duplicate, alreadyExists: true } };
+          if (list.length >= 200) return { changed: false, result: { error: "The shared library has reached its playlist limit." } };
+          const playlist = { id: crypto.randomUUID(), name, tracks: [] };
+          list.push(playlist);
+          return { changed: true, result: { playlist, alreadyExists: false } };
+        }, "Create shared playlist: " + name);
+        if (updated.result.error) return json({ error: updated.result.error }, 429);
+        return json({ ok: true, ...updated.result });
+      } catch (error) {
+        return json({ error: error.message || "Could not create shared playlist.", stage: "creating_playlist", githubDetails: error.githubDetails || null }, error.status || 500);
+      }
+    }
+
+    if (url.pathname === "/playlists" && request.method === "PUT") {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: "Request body must be valid JSON." }, 400); }
+      const id = String(body.id || "").trim();
+      if (!id) return json({ error: "Playlist ID is required." }, 400);
+      const hasName = Object.prototype.hasOwnProperty.call(body, "name");
+      const name = hasName ? safePlaylistName(body.name) : "";
+      if (hasName && !name) return json({ error: "Playlist name is required." }, 400);
+      const addTracks = body.addTracks === undefined ? [] : body.addTracks;
+      if (!Array.isArray(addTracks) || addTracks.length > 200) return json({ error: "addTracks must be a list of up to 200 track paths." }, 400);
+      if (addTracks.some(path => typeof path !== "string" || path.length > 300)) return json({ error: "Invalid track path." }, 400);
+      try {
+        let validPaths = new Set();
+        if (addTracks.length) {
+          const tracksFile = await getContent("tracks.json", env.GH_TOKEN);
+          const tracksData = parseJsonFile(tracksFile, { tracks: [] });
+          validPaths = new Set((Array.isArray(tracksData.tracks) ? tracksData.tracks : []).map(track => track.src).filter(value => typeof value === "string"));
+          const invalid = addTracks.filter(path => !validPaths.has(path));
+          if (invalid.length) return json({ error: "One or more selected tracks are not in the public music library." }, 400);
+        }
+        const updated = await mutatePlaylists(env.GH_TOKEN, list => {
+          const playlist = list.find(item => item.id === id);
+          if (!playlist) return { changed: false, result: { error: "Playlist not found." } };
+          if (hasName) {
+            const duplicate = list.find(item => item.id !== id && String(item.name || "").toLocaleLowerCase() === name.toLocaleLowerCase());
+            if (duplicate) return { changed: false, result: { error: "A playlist with this name already exists." } };
+            playlist.name = name;
+          }
+          if (!Array.isArray(playlist.tracks)) playlist.tracks = [];
+          const before = playlist.tracks.length;
+          playlist.tracks = [...new Set([...playlist.tracks, ...addTracks])];
+          return { changed: hasName || playlist.tracks.length !== before, result: { playlist } };
+        }, "Update shared playlist");
+        if (updated.result.error) return json({ error: updated.result.error }, updated.result.error === "Playlist not found." ? 404 : 409);
+        return json({ ok: true, playlist: updated.result.playlist });
+      } catch (error) {
+        return json({ error: error.message || "Could not update shared playlist.", stage: "updating_playlist", githubDetails: error.githubDetails || null }, error.status || 500);
+      }
     }
 
     const suppliedKey = request.headers.get("X-Upload-Key") || "";
     if (!env.UPLOAD_KEY || !secureEqual(suppliedKey, env.UPLOAD_KEY)) {
       return json({ error: "Upload key is incorrect." }, 401);
     }
-    if (!env.GH_TOKEN) return json({ error: "Worker is missing the GH_TOKEN secret." }, 500);
 
     if (url.pathname === "/diagnostics" && request.method === "GET") {
       try {
@@ -153,26 +243,6 @@ export default {
         });
       } catch (error) {
         return json({ error: error.message || "Could not load the library.", githubDetails: error.githubDetails || null }, error.status || 500);
-      }
-    }
-
-    if (url.pathname === "/playlists" && request.method === "POST") {
-      let body;
-      try { body = await request.json(); } catch (_) { return json({ error: "Request body must be valid JSON." }, 400); }
-      const name = safePlaylistName(body.name);
-      if (!name) return json({ error: "Playlist name is required." }, 400);
-      try {
-        const file = await getContent("playlists.json", env.GH_TOKEN);
-        const data = parseJsonFile(file, { playlists: [] });
-        if (!Array.isArray(data.playlists)) data.playlists = [];
-        const duplicate = data.playlists.find(p => String(p.name || "").toLocaleLowerCase() === name.toLocaleLowerCase());
-        if (duplicate) return json({ ok: true, playlist: duplicate, alreadyExists: true });
-        const playlist = { id: crypto.randomUUID(), name, tracks: [] };
-        data.playlists.push(playlist);
-        await putTextFile("playlists.json", env.GH_TOKEN, JSON.stringify(data, null, 2), "Create playlist: " + name, file ? file.sha : null);
-        return json({ ok: true, playlist });
-      } catch (error) {
-        return json({ error: error.message || "Could not create playlist.", stage: "creating_playlist", githubDetails: error.githubDetails || null }, error.status || 500);
       }
     }
 

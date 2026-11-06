@@ -293,6 +293,12 @@
       "artist": "The Neighbourhood",
       "album": "I Love You. (10th Anniversary Edition)",
       "src": "music/Leaving-Tonight.mp3"
+    },
+    {
+      "title": "The Night We Met",
+      "artist": "Lord Huron",
+      "album": "Strange Trails",
+      "src": "music/The-Night-We-Met.mp3"
     }
   ]
 }

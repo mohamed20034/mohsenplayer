@@ -329,6 +329,12 @@
       "artist": "Katy Perry",
       "album": "PRISM",
       "src": "music/Legendary-Lovers.mp3"
+    },
+    {
+      "title": "Heather",
+      "artist": "Conan Gray",
+      "album": "Kid Krow",
+      "src": "music/Heather.mp3"
     }
   ]
 }

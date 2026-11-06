@@ -35,21 +35,6 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 .queue-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px}
 .queue-actions button{margin:0}.queue-count{font-size:11px;color:#aaa;margin-left:auto}
 .dropzone{border:1px dashed #555;border-radius:10px;padding:16px;background:#202020}
-
-.compress-panel{background:#14241a;border:1px solid #285b3b;border-radius:10px;padding:14px;margin:15px 0}
-.compress-title{font-size:12px;font-weight:900;letter-spacing:.05em;color:#c8f7d6}
-.compress-description{font-size:11px;line-height:1.55;color:#9fc5a9;margin:5px 0 12px}
-.compress-controls{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:10px;align-items:end}
-.compress-controls select{margin-top:5px;width:100%;background:#202d24;color:#fff;border:1px solid #45614a;border-radius:8px;padding:10px;font:inherit;font-size:12px}
-.bulk-check{display:flex;align-items:center;gap:8px;font-size:11px;color:#d8e9dc;cursor:pointer}
-.bulk-check input{width:16px;height:16px;accent-color:var(--green);flex:none}
-.compress-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
-.compress-actions button{margin:0}
-.compress-output{font-size:10px;color:#9fc5a9;line-height:1.5}
-.pill.compressed{background:#163b28;color:#8bf0ae}
-.compress-help{font-size:10px;color:#849989;margin-top:10px;line-height:1.5}
-@media(max-width:620px){.compress-controls{grid-template-columns:1fr}.compress-panel{padding:12px}}
-
 @media(max-width:620px){.card{padding:18px}.track-fields{grid-template-columns:1fr}.track-top{align-items:flex-start}}
 </style>
 </head>
@@ -77,29 +62,8 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 <input id="audioFiles" type="file" multiple accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.webm">
 <p class="small">Examples detected automatically: <span dir="auto">Amr Diab - Tamally Maak.mp3</span> or <span dir="auto">عمرو دياب - تملي معاك.mp3</span>. Embedded MP3 Title / Artist / Album tags take priority when present.</p>
 </div>
-<div class="compress-panel">
-  <div class="fieldrow"><div class="compress-title">LOCAL AUDIO COMPRESSOR</div><span class="pill compressed">ON-DEVICE</span></div>
-  <p class="compress-description">Compress the files selected from your device before uploading. Processing is local in your browser — no song is downloaded from the internet.</p>
-  <div class="compress-controls">
-    <label class="bulk-check"><input id="bulkCompress" type="checkbox" checked> Bulk mode · compress all selected tracks</label>
-    <label>OUTPUT BITRATE
-      <select id="compressBitrate">
-        <option value="96000">96 kbps · Smaller</option>
-        <option value="128000" selected>128 kbps · Balanced</option>
-        <option value="160000">160 kbps · High</option>
-        <option value="192000">192 kbps · Very high</option>
-      </select>
-    </label>
-  </div>
-  <div class="compress-actions">
-    <button id="compressAll" type="button" disabled>COMPRESS SELECTED</button>
-    <label class="bulk-check"><input id="useCompressed" type="checkbox" checked> Upload compressed versions</label>
-    <span class="queue-count" id="compressSummary">No compressed tracks yet</span>
-  </div>
-  <div class="compress-help">Exports Opus audio in WebM format using Chrome / Edge built-in encoding. No FFmpeg, CDN, API, or external library. Original files are kept in the queue until you disconnect or refresh.</div>
-</div>
 <div class="queue-actions">
-<button class="secondary" id="clearQueue" type="button" disabled>CLEAR LIST</button>
+<button class="secondary" id="clearQueue" type="button">CLEAR LIST</button>
 <span class="queue-count" id="queueCount">0 files selected</span>
 </div>
 <div id="queue"></div>
@@ -117,7 +81,7 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
-let workerUrl='',uploadKey='',queue=[],nextId=1,isUploading=false,isCompressing=false;
+let workerUrl='',uploadKey='',queue=[],nextId=1,isUploading=false;
 const MAX_BYTES=20*1024*1024;
 const ALLOWED_EXTENSIONS=new Set(['mp3','wav','m4a','ogg','flac','aac','opus','webm']);
 
@@ -238,31 +202,26 @@ function renderQueue(){
     '<label>Album<input class="q-album" type="text" dir="auto"></label>'+
    '</div><div class="track-status"></div>';
   card.querySelector('.track-file').textContent=item.file.name;
-  card.querySelector('.track-meta').textContent=(item.file.size/1024/1024).toFixed(2)+' MB original'+(item.compressedFile?' → '+(item.compressedFile.size/1024/1024).toFixed(2)+' MB Opus':'')+' · '+item.detectSource;
+  card.querySelector('.track-meta').textContent=(item.file.size/1024/1024).toFixed(2)+' MB · '+item.detectSource;
   const pill=card.querySelector('.pill');
-  setPill(pill,item.state==='done'?'Uploaded':item.state==='error'?'Failed':item.compressedFile?'Compressed':'Ready',item.state==='done'?'ok':item.state==='error'?'bad':item.compressedFile?'compressed':'');
+  setPill(pill,item.state==='done'?'Uploaded':item.state==='error'?'Failed':'Ready',item.state==='done'?'ok':item.state==='error'?'bad':'');
   const title=card.querySelector('.q-title'),artist=card.querySelector('.q-artist'),album=card.querySelector('.q-album');
   title.value=item.title;artist.value=item.artist;album.value=item.album;
   title.addEventListener('input',()=>item.title=title.value);
   artist.addEventListener('input',()=>item.artist=artist.value);
   album.addEventListener('input',()=>item.album=album.value);
   card.querySelector('.remove').addEventListener('click',()=>{
-   if(isUploading||isCompressing)return;
+   if(isUploading)return;
    queue=queue.filter(x=>x.id!==item.id);renderQueue();
   });
-  card.querySelector('.track-status').textContent=[item.compressionMessage,item.message].filter(Boolean).join(' · ');
+  card.querySelector('.track-status').textContent=item.message||'';
   host.appendChild(card);
  });
  const pending=queue.filter(x=>x.state!=='done').length;
- const compressed=queue.filter(x=>x.compressedFile);
- const originalBytes=compressed.reduce((sum,x)=>sum+x.file.size,0);
- const outputBytes=compressed.reduce((sum,x)=>sum+x.compressedFile.size,0);
- $('compressSummary').textContent=compressed.length?compressed.length+' compressed · '+(originalBytes>=outputBytes?'saved ':'larger by ')+(Math.abs(originalBytes-outputBytes)/1024/1024).toFixed(2)+' MB':'No compressed tracks yet';
  $('queueCount').textContent=queue.length+' file'+(queue.length===1?'':'s')+' selected · '+pending+' remaining';
- $('uploadAll').disabled=isUploading||isCompressing||pending===0;
+ $('uploadAll').disabled=isUploading||pending===0;
  $('uploadAll').textContent=isUploading?'UPLOADING...':(pending?'UPLOAD '+pending+' TRACK'+(pending===1?'':'S'):'ALL UPLOADED');
- $('clearQueue').disabled=isUploading||isCompressing||queue.length===0;
- $('compressAll').disabled=isUploading||isCompressing||queue.filter(x=>x.state!=='done').length===0;
+ $('clearQueue').disabled=isUploading||queue.length===0;
 }
 $('generateKey').addEventListener('click',()=>{
  const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
@@ -287,7 +246,7 @@ $('connectBtn').addEventListener('click',async()=>{
  finally{$('connectBtn').disabled=false;}
 });
 $('disconnectBtn').addEventListener('click',()=>{
- if(isUploading||isCompressing)return;
+ if(isUploading)return;
  workerUrl='';uploadKey='';queue=[];
  $('workerUrl').value='';$('uploadKey').value='';
  $('upload').classList.add('hidden');$('settings').classList.remove('hidden');
@@ -331,121 +290,30 @@ $('audioFiles').addEventListener('change',async event=>{
  status('Detecting track information for '+accepted.length+' file(s)...');
  const detected=await Promise.all(accepted.map(async file=>{
   const meta=await detectMetadata(file);
-  return {id:nextId++,file,compressedFile:null,title:meta.title,artist:meta.artist,album:meta.album,detectSource:meta.source,state:'ready',message:'',compressionMessage:''};
+  return {id:nextId++,file,title:meta.title,artist:meta.artist,album:meta.album,detectSource:meta.source,state:'ready',message:''};
  }));
  queue.push(...detected);
  renderQueue();
  status('Added '+detected.length+' file(s) to the queue.'+(rejected?' Ignored '+rejected+' unsupported file(s).':''));
  event.target.value='';
 });
-$('compressAll').addEventListener('click',compressQueue);
 $('clearQueue').addEventListener('click',()=>{
- if(isUploading||isCompressing)return;
+ if(isUploading)return;
  queue=[];renderQueue();status('Upload queue cleared.');
 });
-
-function getUploadFile(item){
- return item.compressedFile&&$('useCompressed').checked?item.compressedFile:item.file;
-}
-function preferredOpusMime(){
- if(!window.MediaRecorder)return null;
- const types=['audio/webm;codecs=opus','audio/ogg;codecs=opus'];
- if(typeof MediaRecorder.isTypeSupported!=='function')return '';
- return types.find(type=>MediaRecorder.isTypeSupported(type))||'';
-}
-async function compressLocalFile(file,bitrate){
- const AudioCtx=window.AudioContext||window.webkitAudioContext;
- if(!AudioCtx||!window.MediaRecorder)throw new Error('Local audio encoding is unavailable. Use the latest Chrome or Microsoft Edge.');
- const context=new AudioCtx();
- let source=null,recorder=null;
- try{
-  const data=await file.arrayBuffer();
-  const audioBuffer=await context.decodeAudioData(data.slice(0));
-  if(context.state==='suspended')await context.resume();
-  const destination=context.createMediaStreamDestination();
-  source=context.createBufferSource();
-  source.buffer=audioBuffer;
-  source.connect(destination);
-  const mime=preferredOpusMime();
-  const options={audioBitsPerSecond:bitrate};
-  if(mime)options.mimeType=mime;
-  recorder=new MediaRecorder(destination.stream,options);
-  const chunks=[];
-  const finished=new Promise((resolve,reject)=>{
-   recorder.ondataavailable=event=>{if(event.data&&event.data.size)chunks.push(event.data);};
-   recorder.onerror=event=>reject(event.error||new Error('Audio encoder failed.'));
-   recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||mime||'audio/webm'}));
-  });
-  recorder.start(250);
-  source.onended=()=>{if(recorder.state!=='inactive')recorder.stop();};
-  source.start(0);
-  const blob=await finished;
-  if(!blob.size)throw new Error('The browser returned an empty compressed file.');
-  const ext=blob.type.includes('ogg')?'.ogg':'.webm';
-  const base=file.name.replace(/\.[^.]+$/,'');
-  const outputName=base+'_compressed'+ext;
-  return new File([blob],outputName,{type:blob.type||'audio/webm',lastModified:Date.now()});
- }finally{
-  if(source){try{source.disconnect();}catch(_){}}
-  if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(_){}}
-  if(context.state!=='closed'){try{await context.close();}catch(_){}}
- }
-}
-async function compressQueue(){
- if(isCompressing||isUploading)return;
- if(!queue.length){status('Choose audio files first.',true);return;}
- const pending=queue.filter(item=>item.state!=='done');
- const batch=$('bulkCompress').checked?pending:pending.slice(0,1);
- if(!batch.length){status('There are no tracks available to compress.');return;}
- isCompressing=true;renderQueue();
- const bitrate=Number($('compressBitrate').value);
- let completed=0,failed=0;
- for(let index=0;index<batch.length;index++){
-  const item=batch[index];
-  item.compressionMessage='Compressing locally '+(index+1)+' / '+batch.length+'...';
-  $('progressText').textContent='Compressing '+(index+1)+' / '+batch.length;
-  status('Compressing on this device: '+item.file.name);
-  renderQueue();
-  try{
-   const output=await compressLocalFile(item.file,bitrate);
-   item.compressedFile=output;
-   const delta=item.file.size-output.size;
-   const pct=Math.round((delta/item.file.size)*100);
-   item.compressionMessage=delta>=0
-    ?'Compressed '+Math.max(0,pct)+'% smaller'
-    :'Opus output is '+Math.abs(pct)+'% larger than original';
-   completed++;
-  }catch(error){
-   item.compressedFile=null;
-   item.compressionMessage='Compression failed: '+(error.message||'Unsupported audio file');
-   failed++;
-  }
-  renderQueue();
-  const available=queue.filter(x=>x.compressedFile);
-  const originalBytes=available.reduce((sum,x)=>sum+x.file.size,0);
-  const outputBytes=available.reduce((sum,x)=>sum+x.compressedFile.size,0);
-  $('compressSummary').textContent=available.length
-   ?available.length+' compressed · '+(originalBytes>=outputBytes?'saved ':'larger by ')+((Math.abs(originalBytes-outputBytes)/1024/1024).toFixed(2))+' MB'
-   :'No compressed tracks yet';
- }
- isCompressing=false;renderQueue();
- $('progressText').textContent=completed+' compressed · '+failed+' failed';
- status('Local compression finished. '+completed+' compressed, '+failed+' failed.'+(failed?' You can still upload the original files.':''));
-}
-
 function encodeFile(buffer){
  const bytes=new Uint8Array(buffer);let binary='';const step=0x8000;
  for(let i=0;i<bytes.length;i+=step)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+step,bytes.length)));
  return btoa(binary);
 }
 async function uploadOne(item){
- const uploadFile=getUploadFile(item);
+ const ext=(item.file.name.match(/\.[a-z0-9]+$/i)||['.mp3'])[0].toLowerCase();
  const payload={
-  title:normaliseText(item.title)||removeExtension(uploadFile.name),
+  title:normaliseText(item.title)||removeExtension(item.file.name),
   artist:normaliseText(item.artist)||'Unknown artist',
   album:normaliseText(item.album)||'Singles',
-  fileName:uploadFile.name,
-  fileBase64:encodeFile(await uploadFile.arrayBuffer())
+  fileName:item.file.name,
+  fileBase64:encodeFile(await item.file.arrayBuffer())
  };
  const response=await fetch(workerUrl+'/upload',{
   method:'POST',
@@ -474,9 +342,8 @@ $('uploadAll').addEventListener('click',async()=>{
  let success=0,failed=0;
  for(let index=0;index<batch.length;index++){
   const item=batch[index];
-  const uploadFile=getUploadFile(item);
-  if(uploadFile.size===0){item.state='error';item.message='Skipped: empty file.';failed++;renderQueue();continue;}
-  if(uploadFile.size>MAX_BYTES){item.state='error';item.message='Skipped: selected upload file exceeds the 20 MB limit.';failed++;renderQueue();continue;}
+  if(item.file.size===0){item.state='error';item.message='Skipped: empty file.';failed++;renderQueue();continue;}
+  if(item.file.size>MAX_BYTES){item.state='error';item.message='Skipped: exceeds the 20 MB file limit.';failed++;renderQueue();continue;}
   if(!normaliseText(item.title)){item.state='error';item.message='Skipped: title is required.';failed++;renderQueue();continue;}
   item.state='uploading';item.message='Uploading '+(index+1)+' of '+batch.length+'...';
   $('progressText').textContent=(index+1)+' / '+batch.length;

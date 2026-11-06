@@ -335,6 +335,12 @@
       "artist": "Conan Gray",
       "album": "Kid Krow",
       "src": "music/Heather.mp3"
+    },
+    {
+      "title": "Earned It",
+      "artist": "The Weeknd",
+      "album": "Beauty Behind The Madness",
+      "src": "music/Earned-It-Fifty-Shades-Of-Grey.mp3"
     }
   ]
 }

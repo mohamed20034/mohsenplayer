@@ -275,6 +275,12 @@
       "artist": "Charlie Puth/Selena Gomez",
       "album": "Nine Track Mind (Special Edition)",
       "src": "music/We-Don-t-Talk-Anymore-feat-Selena-Gomez.mp3"
+    },
+    {
+      "title": "Like You Do",
+      "artist": "Joji",
+      "album": "Nectar",
+      "src": "music/Like-You-Do.mp3"
     }
   ]
 }

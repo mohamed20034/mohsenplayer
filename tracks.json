@@ -389,6 +389,12 @@
       "artist": "Chase Atlantic",
       "album": "Nostalgia - EP",
       "src": "music/Friends.mp3"
+    },
+    {
+      "title": "Moth To A Flame (with The Weeknd)",
+      "artist": "Swedish House Mafia/The Weeknd",
+      "album": "Moth To A Flame",
+      "src": "music/Moth-To-A-Flame-with-The-Weeknd.mp3"
     }
   ]
 }

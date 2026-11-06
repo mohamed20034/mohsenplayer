@@ -383,6 +383,12 @@
       "artist": "ZAYN/Sia",
       "album": "Icarus Falls",
       "src": "music/Dusk-Till-Dawn-feat-Sia---Radio-Edit.mp3"
+    },
+    {
+      "title": "Friends",
+      "artist": "Chase Atlantic",
+      "album": "Nostalgia - EP",
+      "src": "music/Friends.mp3"
     }
   ]
 }

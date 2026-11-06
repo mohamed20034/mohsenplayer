@@ -25,7 +25,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
 .arrows{display:flex;gap:8px}.circle{width:32px;height:32px;border-radius:50%;border:0;background:#0009;color:#ddd;font-size:19px}
 .profile{border:0;border-radius:99px;background:#080808;color:#fff;padding:6px 12px 6px 6px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:8px}.avatar{width:24px;height:24px;border-radius:50%;background:var(--green);color:#071509;display:grid;place-items:center;font-weight:900}
 .content{padding:16px 26px 34px}.hero{display:flex;align-items:end;gap:22px;margin:8px 0 26px}.hero-art{width:174px;height:174px;flex:none;border-radius:5px;background:linear-gradient(140deg,#d5ff73,#6d8e30 55%,#182014);box-shadow:0 8px 30px #0006;display:grid;place-items:center;color:#10180a;font-size:65px;font-weight:1000;letter-spacing:-.1em}.hero-copy small{font-size:11px;font-weight:700}.hero-copy h1{font-size:clamp(35px,5vw,68px);letter-spacing:-.06em;line-height:.95;margin:12px 0}.hero-copy p{color:#e0e7df;font-size:12px;margin:0}.hero-copy .muted{color:#c1c9c1;margin-top:9px}
-.toolbar{display:flex;align-items:center;gap:18px;margin:10px 0 14px}.big-play{width:54px;height:54px;border-radius:50%;border:0;background:var(--green);color:#000;font-size:22px;padding-left:5px}.big-play:hover{transform:scale(1.04)}.tool{border:0;background:none;color:#aaa;font-size:23px}.tool.active{color:var(--green)}
+.toolbar{display:flex;align-items:center;gap:18px;margin:10px 0 14px}.big-play{width:54px;height:54px;border-radius:50%;border:0;background:var(--green);color:#000;font-size:22px;padding-left:5px}.big-play:hover{transform:scale(1.04)}.tool{border:0;background:none;color:#aaa;font-size:23px}.tool.active{color:var(--green)}.ctrl.active{color:var(--green)}
 .playlist-tools{display:grid;gap:10px;margin:0 0 18px}
 .playlist-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .playlist-actions button,.playlist-panel button{border:0;border-radius:99px;padding:9px 14px;font-size:11px;font-weight:800}.playlist-actions button:disabled,.playlist-panel button:disabled{opacity:.4;cursor:not-allowed}
@@ -210,7 +210,7 @@ function playAt(i,historyMode='new'){
  if(i<0||i>=tracks.length)return;
  current=i;
  if(shuffle&&historyMode==='new'){
-  if(shuffleHistoryIndex<shuffleHistory.length-1)shuffleHistory=shuffleHistory.slice(0,shuffleHistoryIndex+1);
+  shuffleHistory=shuffleHistory.slice(0,shuffleHistoryIndex+1);
   shuffleHistory.push(i);
   shuffleHistoryIndex=shuffleHistory.length-1;
   makeShuffleDeck(shuffleHistory);
@@ -230,12 +230,12 @@ function next(){
    return;
   }
   if(!shuffleDeck.length){
+   if(tracks.length===1)return;
    makeShuffleDeck([current]);
-   shuffleHistory=current>=0?[current]:[];
-   shuffleHistoryIndex=shuffleHistory.length-1;
   }
   if(!shuffleDeck.length)return;
   const i=shuffleDeck.shift();
+  shuffleHistory=shuffleHistory.slice(0,shuffleHistoryIndex+1);
   shuffleHistory.push(i);
   shuffleHistoryIndex=shuffleHistory.length-1;
   playAt(i,'history');
@@ -268,7 +268,7 @@ function syncShuffleButtons(){
   const button=$(id);
   button.classList.toggle('active',shuffle);
   button.setAttribute('aria-pressed',String(shuffle));
-  button.title=shuffle?'Shuffle is on':'Shuffle is off';
+  button.title=shuffle?'Shuffle is ON':'Shuffle is OFF';
  });
 }
 function toggleShuffle(){
@@ -278,13 +278,13 @@ function toggleShuffle(){
   if(current>=0){
    shuffleHistory=[current];shuffleHistoryIndex=0;
    makeShuffleDeck([current]);
+   if(tracks.length>1)next();
   }else{
    makeShuffleDeck([]);
   }
  }
  syncShuffleButtons();
-}
-function toggleRepeat(){
+}function toggleRepeat(){
  repeat=!repeat;
  ['repeat','repeatSmall'].forEach(id=>$(id).classList.toggle('active',repeat));
 }

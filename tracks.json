@@ -425,6 +425,12 @@
       "artist": "The Weeknd",
       "album": "My Dear Melancholy,",
       "src": "music/Call-Out-My-Name.mp3"
+    },
+    {
+      "title": "Last Christmas - Single Version",
+      "artist": "Wham!",
+      "album": "All-Star Christmas",
+      "src": "music/Last-Christmas---Single-Version.mp3"
     }
   ]
 }

@@ -108,6 +108,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
 <script>
 (()=>{
 const $=id=>document.getElementById(id),audio=$('audio');
+const PLAYLIST_API='https://mohsen-player-uploader.mohamed20034.workers.dev';
 let tracks=[],allTracks=[],playlists=[],activePlaylistId='',current=-1,shuffle=false,repeat=false,liked=new Set(),selectedTrackPaths=new Set(),selectionAnchorIndex=-1;
 let shuffleDeck=[],shuffleHistory=[],shuffleHistoryIndex=-1;
 const fmt=s=>Number.isFinite(s)?Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'):'0:00';
@@ -119,21 +120,60 @@ function loadSavedPlaylists(){
   return Array.isArray(saved)?saved.filter(p=>p&&typeof p.id==='string'&&typeof p.name==='string'&&Array.isArray(p.tracks)):[];
  }catch(_){return [];}
 }
-function savePlaylists(){
- try{localStorage.setItem('player.userPlaylists.v1',JSON.stringify(playlists));}
- catch(_){showError('Could not save playlists in this browser. Check your browser storage settings.');}
+async function playlistRequest(method='GET',body=null){
+ const options={method,cache:'no-store'};
+ if(body){
+  options.headers={'Content-Type':'application/json'};
+  options.body=JSON.stringify(body);
+ }
+ const response=await fetch(PLAYLIST_API+'/playlists',options);
+ let data={};
+ try{data=await response.json();}catch(_){}
+ if(!response.ok||!data.ok)throw new Error(data.error||('Playlist service returned HTTP '+response.status));
+ return data;
+}
+async function migrateLocalPlaylists(){
+ if(localStorage.getItem('player.sharedPlaylistsMigrated.v2')==='yes')return;
+ const legacy=loadSavedPlaylists();
+ if(!legacy.length){
+  localStorage.setItem('player.sharedPlaylistsMigrated.v2','yes');
+  return;
+ }
+ for(const old of legacy){
+  let shared=playlists.find(p=>p.id===old.id)||playlists.find(p=>p.name.toLocaleLowerCase()===old.name.toLocaleLowerCase());
+  if(!shared){
+   const created=await playlistRequest('POST',{name:old.name});
+   shared=created.playlist;
+   if(!playlists.some(p=>p.id===shared.id))playlists.push(shared);
+  }
+  const validTracks=(old.tracks||[]).filter(path=>allTracks.some(track=>track.srcPath===path));
+  const additions=validTracks.filter(path=>!shared.tracks.includes(path));
+  if(additions.length){
+   const updated=await playlistRequest('PUT',{id:shared.id,addTracks:additions});
+   shared=updated.playlist;
+   const index=playlists.findIndex(p=>p.id===shared.id);
+   if(index>=0)playlists[index]=shared;else playlists.push(shared);
+  }
+ }
+ localStorage.setItem('player.sharedPlaylistsMigrated.v2','yes');
 }
 async function loadLibrary(){
  try{
-  const trackResponse=await fetch('./tracks.json',{cache:'no-store'});
+  const [trackResponse,playlistData]=await Promise.all([
+   fetch('./tracks.json',{cache:'no-store'}),
+   playlistRequest('GET')
+  ]);
   if(!trackResponse.ok)throw new Error('Could not load tracks.json (HTTP '+trackResponse.status+').');
   const data=await trackResponse.json();
   allTracks=(data.tracks||[]).filter(t=>t.src).map(t=>({...t,srcPath:t.src,src:new URL(t.src,document.baseURI).href}));
-  playlists=loadSavedPlaylists();
+  playlists=Array.isArray(playlistData.playlists)?playlistData.playlists:[];
+  try{await migrateLocalPlaylists();}catch(migrationError){console.warn('Legacy playlist migration:',migrationError);}
   tracks=allTracks.slice();
   renderPlaylistNav();
   render();
- }catch(e){showError('Could not load your music catalogue.<br>Check that <b>tracks.json</b> is valid JSON.<br><small>'+esc(e.message)+'</small>');}
+ }catch(e){
+  showError('Could not load your shared playlists or music library.<br>Check your connection and the Cloudflare Worker deployment.<br><small>'+esc(e.message)+'</small>');
+ }
 }
 function renderPlaylistNav(){
  const host=$('playlistNav');host.innerHTML='';
@@ -361,30 +401,45 @@ function renderPlaylistControls(){
  if(playlists.some(p=>p.id===previous))select.value=previous;
  $('confirmAddToPlaylist').disabled=!select.value||count===0;
 }
-function createPlaylist(){
+async function createPlaylist(){
  const name=$('newPlaylistName').value.trim();
  if(!name){$('newPlaylistName').focus();return;}
  if(playlists.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){alert('A playlist with this name already exists.');return;}
- const playlist={id:(crypto.randomUUID?crypto.randomUUID():('pl-'+Date.now()+'-'+Math.random().toString(16).slice(2))),name,tracks:[]};
- playlists.push(playlist);savePlaylists();
- $('newPlaylistName').value='';$('createPlaylistPanel').hidden=true;
- renderPlaylistNav();
- $('targetPlaylistSelect').value=playlist.id;
- renderPlaylistControls();
- if(selectedTrackPaths.size)$('addPlaylistPanel').hidden=false;
+ const button=$('saveNewPlaylist');button.disabled=true;
+ try{
+  const result=await playlistRequest('POST',{name});
+  const playlist=result.playlist;
+  const existing=playlists.findIndex(p=>p.id===playlist.id);
+  if(existing>=0)playlists[existing]=playlist;else playlists.push(playlist);
+  $('newPlaylistName').value='';$('createPlaylistPanel').hidden=true;
+  renderPlaylistNav();
+  $('targetPlaylistSelect').value=playlist.id;
+  renderPlaylistControls();
+  if(selectedTrackPaths.size)$('addPlaylistPanel').hidden=false;
+  if(result.alreadyExists)alert('A playlist with this name already exists.');
+ }catch(error){alert('Could not create playlist: '+error.message);}
+ finally{button.disabled=false;}
 }
-function addSelectedToPlaylist(){
+async function addSelectedToPlaylist(){
  const playlist=playlists.find(p=>p.id===$('targetPlaylistSelect').value);
  if(!playlist){alert('Choose a playlist first.');return;}
  const selected=[...selectedTrackPaths];
- playlist.tracks=[...new Set([...playlist.tracks,...selected])];
- savePlaylists();selectedTrackPaths.clear();selectionAnchorIndex=-1;
- if(activePlaylistId===playlist.id){
-  const members=new Set(playlist.tracks);tracks=allTracks.filter(track=>members.has(track.srcPath));
-  shuffleDeck=[];shuffleHistory=[];shuffleHistoryIndex=-1;current=-1;
- }
- $('addPlaylistPanel').hidden=true;
- renderPlaylistNav();render(); 
+ if(!selected.length)return;
+ const button=$('confirmAddToPlaylist');button.disabled=true;
+ try{
+  const result=await playlistRequest('PUT',{id:playlist.id,addTracks:selected});
+  const updated=result.playlist;
+  const index=playlists.findIndex(p=>p.id===updated.id);
+  if(index>=0)playlists[index]=updated;else playlists.push(updated);
+  selectedTrackPaths.clear();selectionAnchorIndex=-1;
+  if(activePlaylistId===playlist.id){
+   const members=new Set(updated.tracks);tracks=allTracks.filter(track=>members.has(track.srcPath));
+   shuffleDeck=[];shuffleHistory=[];shuffleHistoryIndex=-1;current=-1;
+  }
+  $('addPlaylistPanel').hidden=true;
+  renderPlaylistNav();render();
+ }catch(error){alert('Could not add tracks to playlist: '+error.message);}
+ finally{button.disabled=false;}
 }
 function beginRenamePlaylist(){
  const playlist=playlists.find(p=>p.id===activePlaylistId);
@@ -396,18 +451,24 @@ function beginRenamePlaylist(){
  $('renamePlaylistName').focus();
  $('renamePlaylistName').select();
 }
-function saveRenamedPlaylist(){
+async function saveRenamedPlaylist(){
  const playlist=playlists.find(p=>p.id===activePlaylistId);
  const name=$('renamePlaylistName').value.trim();
  if(!playlist){$('renamePlaylistPanel').hidden=true;return;}
  if(!name){$('renamePlaylistName').focus();return;}
  const duplicate=playlists.some(p=>p.id!==playlist.id&&p.name.toLocaleLowerCase()===name.toLocaleLowerCase());
  if(duplicate){alert('A playlist with this name already exists.');return;}
- playlist.name=name;
- savePlaylists();
- $('renamePlaylistPanel').hidden=true;
- $('viewHeading').textContent=name;
- renderPlaylistNav();
+ const button=$('saveRenamePlaylist');button.disabled=true;
+ try{
+  const result=await playlistRequest('PUT',{id:playlist.id,name});
+  const updated=result.playlist;
+  const index=playlists.findIndex(p=>p.id===updated.id);
+  if(index>=0)playlists[index]=updated;
+  $('renamePlaylistPanel').hidden=true;
+  $('viewHeading').textContent=updated.name;
+  renderPlaylistNav();
+ }catch(error){alert('Could not rename playlist: '+error.message);}
+ finally{button.disabled=false;}
 }
 $('allTracksLink').addEventListener('click',()=>showPlaylist(''));
 $('mobilePlaylistSelect').addEventListener('change',event=>showPlaylist(event.target.value));

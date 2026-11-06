@@ -371,6 +371,12 @@
       "artist": "Joji",
       "album": "BALLADS 1",
       "src": "music/SLOW-DANCING-IN-THE-DARK.mp3"
+    },
+    {
+      "title": "505",
+      "artist": "Arctic Monkeys",
+      "album": "Favourite Worst Nightmare",
+      "src": "music/505.mp3"
     }
   ]
 }

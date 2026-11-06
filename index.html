@@ -31,7 +31,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
 .playlist-actions button,.playlist-panel button{border:0;border-radius:99px;padding:9px 14px;font-size:11px;font-weight:800}.playlist-actions button:disabled,.playlist-panel button:disabled{opacity:.4;cursor:not-allowed}
 .playlist-primary{background:var(--green);color:#071509}
 .playlist-secondary{background:#292929;color:#fff}
-.selection-count{font-size:11px;color:var(--muted);margin-right:auto}
+.selection-count{font-size:11px;color:var(--muted);margin-right:auto}.selection-hint{font-size:10px;color:#777;flex-basis:100%}
 .playlist-panel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px;background:#202020;border:1px solid #383838;border-radius:9px}
 .playlist-panel[hidden]{display:none}
 .playlist-panel select,.playlist-panel input{min-width:0;flex:1;background:#292929;color:#fff;border:1px solid #484848;border-radius:7px;padding:10px;font:inherit;font-size:12px}
@@ -73,6 +73,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
    <section class="playlist-tools" aria-label="Playlist actions">
     <div class="playlist-actions">
      <span class="selection-count" id="selectionCount">0 selected</span>
+     <span class="selection-hint">Ctrl + A: select all · Shift + click: select range</span>
      <button class="playlist-primary" id="addToPlaylistBtn" type="button">＋ ADD TO PLAYLIST</button>
      <button class="playlist-secondary" id="showCreatePlaylistBtn" type="button">＋ CREATE PLAYLIST</button>
      <button class="playlist-secondary" id="showRenamePlaylistBtn" type="button" disabled>✎ RENAME PLAYLIST</button>
@@ -107,7 +108,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
 <script>
 (()=>{
 const $=id=>document.getElementById(id),audio=$('audio');
-let tracks=[],allTracks=[],playlists=[],activePlaylistId='',current=-1,shuffle=false,repeat=false,liked=new Set(),selectedTrackPaths=new Set();
+let tracks=[],allTracks=[],playlists=[],activePlaylistId='',current=-1,shuffle=false,repeat=false,liked=new Set(),selectedTrackPaths=new Set(),selectionAnchorIndex=-1;
 let shuffleDeck=[],shuffleHistory=[],shuffleHistoryIndex=-1;
 const fmt=s=>Number.isFinite(s)?Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'):'0:00';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -156,6 +157,7 @@ function renderPlaylistNav(){
 function showPlaylist(id){
  activePlaylistId=id||'';
  selectedTrackPaths.clear();
+ selectionAnchorIndex=-1;
  $('addPlaylistPanel').hidden=true;
  const playlist=playlists.find(item=>item.id===activePlaylistId);
  if(playlist){
@@ -185,14 +187,33 @@ function render(){
    '<div class="song-title">'+coverHTML(t)+'<div style="min-width:0"><div class="song-name">'+esc(t.title||'Untitled')+'</div><div class="song-artist">'+esc(t.artist||'Unknown artist')+'</div></div></div>'+
    '<span class="album">'+esc(t.album||'Singles')+'</span><span class="length" data-duration="'+i+'">--:--</span></div>';
  }).join('');
- document.querySelectorAll('.song').forEach(el=>el.addEventListener('click',()=>playAt(Number(el.dataset.i))));
+ document.querySelectorAll('.song').forEach(el=>el.addEventListener('click',event=>{
+  const index=Number(el.dataset.i);
+  if(event.shiftKey){
+   event.preventDefault();
+   if(selectionAnchorIndex<0)selectionAnchorIndex=index;
+   selectTrackRange(selectionAnchorIndex,index,true);
+   return;
+  }
+  selectionAnchorIndex=index;
+  playAt(index);
+ }));
  document.querySelectorAll('.select-cell').forEach(el=>el.addEventListener('click',event=>event.stopPropagation()));
  document.querySelectorAll('.song-select').forEach(el=>{
-  el.addEventListener('click',event=>event.stopPropagation());
+  el.addEventListener('click',event=>{
+   event.stopPropagation();
+   if(event.shiftKey){
+    event.preventDefault();
+    const index=Number(el.closest('.song').dataset.i);
+    if(selectionAnchorIndex<0)selectionAnchorIndex=index;
+    selectTrackRange(selectionAnchorIndex,index,true);
+   }
+  });
   el.addEventListener('change',()=>{
+   const index=Number(el.closest('.song').dataset.i);
    if(el.checked)selectedTrackPaths.add(el.dataset.path);else selectedTrackPaths.delete(el.dataset.path);
-   el.closest('.song').classList.toggle('selected',el.checked);
-   renderPlaylistControls();
+   selectionAnchorIndex=index;
+   syncSongSelectionUI();
   });
  });
  tracks.forEach((t,i)=>{const a=new Audio();a.preload='metadata';a.src=t.src;a.addEventListener('loadedmetadata',()=>{const el=document.querySelector('[data-duration="'+i+'"]');if(el)el.textContent=fmt(a.duration)},{once:true})});
@@ -300,6 +321,33 @@ $('shuffleSmall').addEventListener('click',toggleShuffle);
 $('repeat').onclick=toggleRepeat;$('repeatSmall').onclick=toggleRepeat;
 syncShuffleButtons();
 $('like').onclick=()=>{if(current<0)return;liked.has(current)?liked.delete(current):liked.add(current);$('like').textContent=liked.has(current)?'♥':'♡'};
+function syncSongSelectionUI(){
+ document.querySelectorAll('.song').forEach(row=>{
+  const index=Number(row.dataset.i);
+  const track=tracks[index];
+  if(!track)return;
+  const selected=selectedTrackPaths.has(track.srcPath);
+  const checkbox=row.querySelector('.song-select');
+  if(checkbox)checkbox.checked=selected;
+  row.classList.toggle('selected',selected);
+ });
+ renderPlaylistControls();
+}
+function selectTrackRange(startIndex,endIndex,selected=true){
+ if(!tracks.length)return;
+ const start=Math.max(0,Math.min(startIndex,endIndex));
+ const end=Math.min(tracks.length-1,Math.max(startIndex,endIndex));
+ for(let i=start;i<=end;i++){
+  if(selected)selectedTrackPaths.add(tracks[i].srcPath);
+  else selectedTrackPaths.delete(tracks[i].srcPath);
+ }
+ syncSongSelectionUI();
+}
+function selectAllVisibleTracks(){
+ tracks.forEach(track=>selectedTrackPaths.add(track.srcPath));
+ if(tracks.length)selectionAnchorIndex=0;
+ syncSongSelectionUI();
+}
 function renderPlaylistControls(){
  const count=selectedTrackPaths.size;
  $('selectionCount').textContent=count+' selected';
@@ -330,7 +378,7 @@ function addSelectedToPlaylist(){
  if(!playlist){alert('Choose a playlist first.');return;}
  const selected=[...selectedTrackPaths];
  playlist.tracks=[...new Set([...playlist.tracks,...selected])];
- savePlaylists();selectedTrackPaths.clear();
+ savePlaylists();selectedTrackPaths.clear();selectionAnchorIndex=-1;
  if(activePlaylistId===playlist.id){
   const members=new Set(playlist.tracks);tracks=allTracks.filter(track=>members.has(track.srcPath));
   shuffleDeck=[];shuffleHistory=[];shuffleHistoryIndex=-1;current=-1;
@@ -425,7 +473,19 @@ syncVolumeUI();
 $('seek').oninput=e=>{if(Number.isFinite(audio.duration))audio.currentTime=Number(e.target.value)/1000*audio.duration};
 audio.ontimeupdate=()=>{$('currentTime').textContent=fmt(audio.currentTime);$('duration').textContent=fmt(audio.duration);$('seek').value=audio.duration?audio.currentTime/audio.duration*1000:0};
 audio.onplay=setNow;audio.onpause=setNow;audio.onended=()=>repeat?(audio.currentTime=0,audio.play()):next();
-document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;if(e.code==='Space'){e.preventDefault();togglePlay()}else if(e.code==='ArrowRight'&&current>=0)audio.currentTime=Math.min(audio.duration||0,audio.currentTime+5);else if(e.code==='ArrowLeft'&&current>=0)audio.currentTime=Math.max(0,audio.currentTime-5)});
+document.addEventListener('keydown',e=>{
+ const target=e.target,tag=target?.tagName,type=target?.type;
+ const typing=target?.isContentEditable||tag==='TEXTAREA'||(tag==='INPUT'&&!['checkbox','range','button','submit'].includes(type));
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'&&!typing){
+  e.preventDefault();
+  selectAllVisibleTracks();
+  return;
+ }
+ if(typing)return;
+ if(e.code==='Space'){e.preventDefault();togglePlay()}
+ else if(e.code==='ArrowRight'&&current>=0)audio.currentTime=Math.min(audio.duration||0,audio.currentTime+5);
+ else if(e.code==='ArrowLeft'&&current>=0)audio.currentTime=Math.max(0,audio.currentTime-5);
+});
 loadLibrary();
 })();
 </script>

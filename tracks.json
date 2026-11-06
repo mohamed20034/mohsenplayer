@@ -299,6 +299,12 @@
       "artist": "Lord Huron",
       "album": "Strange Trails",
       "src": "music/The-Night-We-Met.mp3"
+    },
+    {
+      "title": "UNETHICAL",
+      "artist": "Faouzia",
+      "album": "FILM NOIR",
+      "src": "music/UNETHICAL.mp3"
     }
   ]
 }

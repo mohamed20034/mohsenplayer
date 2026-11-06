@@ -413,6 +413,12 @@
       "artist": "The Weeknd",
       "album": "House Of Balloons (Original)",
       "src": "music/Coming-Down.mp3"
+    },
+    {
+      "title": "Memories",
+      "artist": "Conan Gray",
+      "album": "Superache",
+      "src": "music/Memories.mp3"
     }
   ]
 }

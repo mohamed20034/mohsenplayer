@@ -401,6 +401,12 @@
       "artist": "Lord Huron",
       "album": "Strange Trails",
       "src": "music/The-Night-We-Met-2.mp3"
+    },
+    {
+      "title": "K.",
+      "artist": "Cigarettes After Sex",
+      "album": "Cigarettes After Sex",
+      "src": "music/K.mp3"
     }
   ]
 }

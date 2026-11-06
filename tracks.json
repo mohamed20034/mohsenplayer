@@ -353,6 +353,12 @@
       "artist": "Shawn Mendes",
       "album": "Illuminate",
       "src": "music/Treat-You-Better.mp3"
+    },
+    {
+      "title": "The Less I Know The Better",
+      "artist": "Tame Impala",
+      "album": "Currents",
+      "src": "music/The-Less-I-Know-The-Better.mp3"
     }
   ]
 }

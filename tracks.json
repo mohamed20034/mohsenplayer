@@ -563,6 +563,12 @@
       "artist": "Amr Diab",
       "album": "Amarain",
       "src": "music/46-Khalik-Fakrny.mp3"
+    },
+    {
+      "title": "Ashrar",
+      "artist": "Jadal",
+      "album": "Malyoun",
+      "src": "music/49-Ashrar.mp3"
     }
   ]
 }

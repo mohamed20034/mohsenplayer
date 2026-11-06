@@ -395,6 +395,12 @@
       "artist": "Swedish House Mafia/The Weeknd",
       "album": "Moth To A Flame",
       "src": "music/Moth-To-A-Flame-with-The-Weeknd.mp3"
+    },
+    {
+      "title": "The Night We Met",
+      "artist": "Lord Huron",
+      "album": "Strange Trails",
+      "src": "music/The-Night-We-Met-2.mp3"
     }
   ]
 }

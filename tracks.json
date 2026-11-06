@@ -569,6 +569,12 @@
       "artist": "Jadal",
       "album": "Malyoun",
       "src": "music/49-Ashrar.mp3"
+    },
+    {
+      "title": "Helwa Ya Baladi",
+      "artist": "Jadal",
+      "album": "Helwa Ya Baladi",
+      "src": "music/51-Helwa-Ya-Baladi.mp3"
     }
   ]
 }

@@ -347,6 +347,12 @@
       "artist": "Tame Impala/JENNIE",
       "album": "Dracula (with JENNIE)",
       "src": "music/Dracula-with-JENNIE-2.mp3"
+    },
+    {
+      "title": "Treat You Better",
+      "artist": "Shawn Mendes",
+      "album": "Illuminate",
+      "src": "music/Treat-You-Better.mp3"
     }
   ]
 }

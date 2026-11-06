@@ -377,6 +377,12 @@
       "artist": "Arctic Monkeys",
       "album": "Favourite Worst Nightmare",
       "src": "music/505.mp3"
+    },
+    {
+      "title": "Dusk Till Dawn (feat. Sia) - Radio Edit",
+      "artist": "ZAYN/Sia",
+      "album": "Icarus Falls",
+      "src": "music/Dusk-Till-Dawn-feat-Sia---Radio-Edit.mp3"
     }
   ]
 }

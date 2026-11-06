@@ -281,6 +281,12 @@
       "artist": "Joji",
       "album": "Nectar",
       "src": "music/Like-You-Do.mp3"
+    },
+    {
+      "title": "A Little Death",
+      "artist": "The Neighbourhood",
+      "album": "I Love You. (10th Anniversary Edition)",
+      "src": "music/A-Little-Death.mp3"
     }
   ]
 }

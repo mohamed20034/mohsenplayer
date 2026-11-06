@@ -575,6 +575,12 @@
       "artist": "Jadal",
       "album": "Helwa Ya Baladi",
       "src": "music/51-Helwa-Ya-Baladi.mp3"
+    },
+    {
+      "title": "Awel Kol Haga",
+      "artist": "Amr Diab",
+      "album": "Meaddy El Nas",
+      "src": "music/45-Awel-Kol-Haga.mp3"
     }
   ]
 }

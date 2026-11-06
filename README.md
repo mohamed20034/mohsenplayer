@@ -25,6 +25,12 @@ A static public music player for GitHub Pages. Audio is streamed by the browser 
 
 `cover` and `album` are optional. For multiple tracks, add comma-separated objects inside the `tracks` array. Paths are relative to the repository root. Use simple filenames without unusual characters; if a filename contains spaces, URL-encode them or rename it.
 
+## Local audio compression
+
+The Admin page includes a browser-based local audio compressor. Select audio files from your device, choose **Compress selected**, and enable Bulk mode to process the whole batch. The compressor uses the browser's built-in Opus encoder and exports WebM audio; it does not download songs, contact an audio-conversion API, or load an external compression library. You can upload the compressed versions through the existing Worker uploader, or turn off **Upload compressed versions** to keep uploading the originals.
+
+Recommended browser: current desktop Chrome or Edge. Compression is done locally; the later upload step still sends the selected output file to your configured Cloudflare Worker and GitHub library.
+
 ## Publish with GitHub Pages
 
 1. Create a **public** GitHub repository.

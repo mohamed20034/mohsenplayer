@@ -102,6 +102,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
 (()=>{
 const $=id=>document.getElementById(id),audio=$('audio');
 let tracks=[],allTracks=[],playlists=[],activePlaylistId='',current=-1,shuffle=false,repeat=false,liked=new Set(),selectedTrackPaths=new Set();
+let shuffleDeck=[],shuffleHistory=[],shuffleHistoryIndex=-1;
 const fmt=s=>Number.isFinite(s)?Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'):'0:00';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function showError(msg){$('songs').innerHTML='<div class="empty error">'+msg+'</div>'}
@@ -159,7 +160,8 @@ function showPlaylist(id){
   tracks=allTracks.slice();
   $('viewHeading').textContent='All Tracks';
  }
- current=-1;audio.pause();audio.removeAttribute('src');audio.load();
+ current=-1;shuffleDeck=[];shuffleHistory=[];shuffleHistoryIndex=-1;
+ audio.pause();audio.removeAttribute('src');audio.load();
  renderPlaylistNav();render();setNow();
 }
 function coverHTML(t,cls='song-cover'){return t.cover?`<img class="${cls}" src="${esc(new URL(t.cover,document.baseURI).href)}" alt="">`:`<div class="${cls}">♫</div>`}
@@ -195,14 +197,102 @@ function setNow(){
  $('nowCover').innerHTML=t?.cover?`<img class="now-cover" src="${esc(new URL(t.cover,document.baseURI).href)}">`:'♫';
  $('play').textContent=audio.paused?'▶':'Ⅱ';$('bigPlay').textContent=audio.paused?'▶':'Ⅱ';render();
 }
-function playAt(i){if(i<0||i>=tracks.length)return;current=i;audio.src=tracks[i].src;audio.play().then(setNow).catch(()=>{setNow();showError('Playback failed. Check the audio file path and format in tracks.json.')});setNow()}
-function next(){if(!tracks.length)return;let i;if(shuffle&&tracks.length>1){do{i=Math.floor(Math.random()*tracks.length)}while(i===current)}else i=(current+1)%tracks.length;playAt(i)}
-function prev(){if(audio.currentTime>3){audio.currentTime=0;return}playAt((current-1+tracks.length)%tracks.length)}
-function togglePlay(){if(current<0){if(tracks.length)playAt(0);return}if(audio.paused)audio.play().then(setNow);else audio.pause();setNow()}
-function toggleShuffle(){shuffle=!shuffle;['shuffle','shuffleSmall'].forEach(id=>$(id).classList.toggle('active',shuffle))}
-function toggleRepeat(){repeat=!repeat;['repeat','repeatSmall'].forEach(id=>$(id).classList.toggle('active',repeat))}
+function makeShuffleDeck(exclude=[]){
+ const blocked=new Set(exclude);
+ const deck=tracks.map((_,index)=>index).filter(index=>!blocked.has(index));
+ for(let i=deck.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [deck[i],deck[j]]=[deck[j],deck[i]];
+ }
+ shuffleDeck=deck;
+}
+function playAt(i,historyMode='new'){
+ if(i<0||i>=tracks.length)return;
+ current=i;
+ if(shuffle&&historyMode==='new'){
+  if(shuffleHistoryIndex<shuffleHistory.length-1)shuffleHistory=shuffleHistory.slice(0,shuffleHistoryIndex+1);
+  shuffleHistory.push(i);
+  shuffleHistoryIndex=shuffleHistory.length-1;
+  makeShuffleDeck(shuffleHistory);
+ }else if(!shuffle){
+  shuffleHistory=[];shuffleHistoryIndex=-1;shuffleDeck=[];
+ }
+ audio.src=tracks[i].src;
+ audio.play().then(setNow).catch(()=>{setNow();showError('Playback failed. Check the audio file path and format in tracks.json.')});
+ setNow();
+}
+function next(){
+ if(!tracks.length)return;
+ if(shuffle){
+  if(shuffleHistoryIndex<shuffleHistory.length-1){
+   shuffleHistoryIndex++;
+   playAt(shuffleHistory[shuffleHistoryIndex],'history');
+   return;
+  }
+  if(!shuffleDeck.length){
+   makeShuffleDeck([current]);
+   shuffleHistory=current>=0?[current]:[];
+   shuffleHistoryIndex=shuffleHistory.length-1;
+  }
+  if(!shuffleDeck.length)return;
+  const i=shuffleDeck.shift();
+  shuffleHistory.push(i);
+  shuffleHistoryIndex=shuffleHistory.length-1;
+  playAt(i,'history');
+  return;
+ }
+ playAt((current+1)%tracks.length);
+}
+function prev(){
+ if(audio.currentTime>3){audio.currentTime=0;return}
+ if(shuffle){
+  if(shuffleHistoryIndex>0){
+   shuffleHistoryIndex--;
+   playAt(shuffleHistory[shuffleHistoryIndex],'history');
+  }else if(current>=0){audio.currentTime=0;}
+  return;
+ }
+ if(tracks.length)playAt((current-1+tracks.length)%tracks.length);
+}
+function togglePlay(){
+ if(current<0){
+  if(!tracks.length)return;
+  if(shuffle){next();return;}
+  playAt(0);return;
+ }
+ if(audio.paused)audio.play().then(setNow);else audio.pause();
+ setNow();
+}
+function syncShuffleButtons(){
+ ['shuffle','shuffleSmall'].forEach(id=>{
+  const button=$(id);
+  button.classList.toggle('active',shuffle);
+  button.setAttribute('aria-pressed',String(shuffle));
+  button.title=shuffle?'Shuffle is on':'Shuffle is off';
+ });
+}
+function toggleShuffle(){
+ shuffle=!shuffle;
+ shuffleDeck=[];shuffleHistory=[];shuffleHistoryIndex=-1;
+ if(shuffle){
+  if(current>=0){
+   shuffleHistory=[current];shuffleHistoryIndex=0;
+   makeShuffleDeck([current]);
+  }else{
+   makeShuffleDeck([]);
+  }
+ }
+ syncShuffleButtons();
+}
+function toggleRepeat(){
+ repeat=!repeat;
+ ['repeat','repeatSmall'].forEach(id=>$(id).classList.toggle('active',repeat));
+}
 $('play').onclick=togglePlay;$('bigPlay').onclick=togglePlay;$('next').onclick=next;$('prev').onclick=prev;
-$('shuffle').onclick=toggleShuffle;$('shuffleSmall').onclick=toggleShuffle;$('repeat').onclick=toggleRepeat;$('repeatSmall').onclick=toggleRepeat;
+$('shuffle').addEventListener('click',toggleShuffle);
+$('shuffleSmall').addEventListener('click',toggleShuffle);
+$('repeat').onclick=toggleRepeat;$('repeatSmall').onclick=toggleRepeat;
+syncShuffleButtons();
 $('like').onclick=()=>{if(current<0)return;liked.has(current)?liked.delete(current):liked.add(current);$('like').textContent=liked.has(current)?'♥':'♡'};
 function renderPlaylistControls(){
  const count=selectedTrackPaths.size;
@@ -236,6 +326,7 @@ function addSelectedToPlaylist(){
  savePlaylists();selectedTrackPaths.clear();
  if(activePlaylistId===playlist.id){
   const members=new Set(playlist.tracks);tracks=allTracks.filter(track=>members.has(track.srcPath));
+  shuffleDeck=[];shuffleHistory=[];shuffleHistoryIndex=-1;current=-1;
  }
  $('addPlaylistPanel').hidden=true;
  renderPlaylistNav();render(); 

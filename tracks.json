@@ -359,6 +359,12 @@
       "artist": "Tame Impala",
       "album": "Currents",
       "src": "music/The-Less-I-Know-The-Better.mp3"
+    },
+    {
+      "title": "The Cut That Always Bleeds",
+      "artist": "Conan Gray",
+      "album": "Kid Krow",
+      "src": "music/The-Cut-That-Always-Bleeds.mp3"
     }
   ]
 }

@@ -75,6 +75,7 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
      <span class="selection-count" id="selectionCount">0 selected</span>
      <button class="playlist-primary" id="addToPlaylistBtn" type="button">＋ ADD TO PLAYLIST</button>
      <button class="playlist-secondary" id="showCreatePlaylistBtn" type="button">＋ CREATE PLAYLIST</button>
+     <button class="playlist-secondary" id="showRenamePlaylistBtn" type="button" disabled>✎ RENAME PLAYLIST</button>
     </div>
     <div class="playlist-panel" id="addPlaylistPanel" hidden>
      <select id="targetPlaylistSelect" aria-label="Choose a playlist"><option value="">Select playlist</option></select>
@@ -85,6 +86,11 @@ button.playlist-link{width:100%;text-align:left;border:0;background:transparent;
      <input id="newPlaylistName" type="text" maxlength="80" placeholder="Playlist name / اسم البلاي ليست" dir="auto">
      <button class="playlist-primary" id="saveNewPlaylist" type="button">CREATE</button>
      <button class="playlist-secondary" id="cancelCreatePlaylist" type="button">CANCEL</button>
+    </div>
+    <div class="playlist-panel" id="renamePlaylistPanel" hidden>
+     <input id="renamePlaylistName" type="text" maxlength="80" placeholder="New playlist name / الاسم الجديد" dir="auto">
+     <button class="playlist-primary" id="saveRenamePlaylist" type="button">SAVE NAME</button>
+     <button class="playlist-secondary" id="cancelRenamePlaylist" type="button">CANCEL</button>
     </div>
    </section>
    <div class="list-head"><span>#</span><span>Title</span><span class="album">Album / Collection</span><span class="length">◷</span></div>
@@ -298,6 +304,7 @@ function renderPlaylistControls(){
  const count=selectedTrackPaths.size;
  $('selectionCount').textContent=count+' selected';
  $('addToPlaylistBtn').disabled=count===0;
+ $('showRenamePlaylistBtn').disabled=!activePlaylistId||!playlists.some(p=>p.id===activePlaylistId);
  const select=$('targetPlaylistSelect');
  const previous=select.value;
  select.innerHTML='';
@@ -331,12 +338,39 @@ function addSelectedToPlaylist(){
  $('addPlaylistPanel').hidden=true;
  renderPlaylistNav();render(); 
 }
+function beginRenamePlaylist(){
+ const playlist=playlists.find(p=>p.id===activePlaylistId);
+ if(!playlist)return;
+ $('renamePlaylistName').value=playlist.name;
+ $('addPlaylistPanel').hidden=true;
+ $('createPlaylistPanel').hidden=true;
+ $('renamePlaylistPanel').hidden=false;
+ $('renamePlaylistName').focus();
+ $('renamePlaylistName').select();
+}
+function saveRenamedPlaylist(){
+ const playlist=playlists.find(p=>p.id===activePlaylistId);
+ const name=$('renamePlaylistName').value.trim();
+ if(!playlist){$('renamePlaylistPanel').hidden=true;return;}
+ if(!name){$('renamePlaylistName').focus();return;}
+ const duplicate=playlists.some(p=>p.id!==playlist.id&&p.name.toLocaleLowerCase()===name.toLocaleLowerCase());
+ if(duplicate){alert('A playlist with this name already exists.');return;}
+ playlist.name=name;
+ savePlaylists();
+ $('renamePlaylistPanel').hidden=true;
+ $('viewHeading').textContent=name;
+ renderPlaylistNav();
+}
 $('allTracksLink').addEventListener('click',()=>showPlaylist(''));
 $('mobilePlaylistSelect').addEventListener('change',event=>showPlaylist(event.target.value));
 $('libraryCreatePlaylist').addEventListener('click',()=>{$('createPlaylistPanel').hidden=!$('createPlaylistPanel').hidden;if(!$('createPlaylistPanel').hidden)$('newPlaylistName').focus();});
 $('showCreatePlaylistBtn').addEventListener('click',()=>{$('createPlaylistPanel').hidden=!$('createPlaylistPanel').hidden;$('addPlaylistPanel').hidden=true;if(!$('createPlaylistPanel').hidden)$('newPlaylistName').focus();});
 $('cancelCreatePlaylist').addEventListener('click',()=>{$('createPlaylistPanel').hidden=true;});
 $('saveNewPlaylist').addEventListener('click',createPlaylist);
+$('showRenamePlaylistBtn').addEventListener('click',beginRenamePlaylist);
+$('saveRenamePlaylist').addEventListener('click',saveRenamedPlaylist);
+$('cancelRenamePlaylist').addEventListener('click',()=>{$('renamePlaylistPanel').hidden=true;});
+$('renamePlaylistName').addEventListener('keydown',event=>{if(event.key==='Enter')saveRenamedPlaylist();if(event.key==='Escape')$('renamePlaylistPanel').hidden=true;});
 $('newPlaylistName').addEventListener('keydown',event=>{if(event.key==='Enter')createPlaylist();});
 $('addToPlaylistBtn').addEventListener('click',()=>{
  if(!playlists.length){$('createPlaylistPanel').hidden=false;$('newPlaylistName').focus();return;}

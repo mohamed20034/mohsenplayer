@@ -92,14 +92,14 @@ button:disabled{opacity:.55;cursor:wait}.full{width:100%}.secondary{background:#
     </label>
   </div>
   <div class="compress-actions">
-    <button id="compressAll" type="button">COMPRESS SELECTED</button>
+    <button id="compressAll" type="button" disabled>COMPRESS SELECTED</button>
     <label class="bulk-check"><input id="useCompressed" type="checkbox" checked> Upload compressed versions</label>
     <span class="queue-count" id="compressSummary">No compressed tracks yet</span>
   </div>
   <div class="compress-help">Exports Opus audio in WebM format using Chrome / Edge built-in encoding. No FFmpeg, CDN, API, or external library. Original files are kept in the queue until you disconnect or refresh.</div>
 </div>
 <div class="queue-actions">
-<button class="secondary" id="clearQueue" type="button">CLEAR LIST</button>
+<button class="secondary" id="clearQueue" type="button" disabled>CLEAR LIST</button>
 <span class="queue-count" id="queueCount">0 files selected</span>
 </div>
 <div id="queue"></div>
@@ -254,6 +254,10 @@ function renderQueue(){
   host.appendChild(card);
  });
  const pending=queue.filter(x=>x.state!=='done').length;
+ const compressed=queue.filter(x=>x.compressedFile);
+ const originalBytes=compressed.reduce((sum,x)=>sum+x.file.size,0);
+ const outputBytes=compressed.reduce((sum,x)=>sum+x.compressedFile.size,0);
+ $('compressSummary').textContent=compressed.length?compressed.length+' compressed · '+(originalBytes>=outputBytes?'saved ':'larger by ')+(Math.abs(originalBytes-outputBytes)/1024/1024).toFixed(2)+' MB':'No compressed tracks yet';
  $('queueCount').textContent=queue.length+' file'+(queue.length===1?'':'s')+' selected · '+pending+' remaining';
  $('uploadAll').disabled=isUploading||isCompressing||pending===0;
  $('uploadAll').textContent=isUploading?'UPLOADING...':(pending?'UPLOAD '+pending+' TRACK'+(pending===1?'':'S'):'ALL UPLOADED');
@@ -283,7 +287,7 @@ $('connectBtn').addEventListener('click',async()=>{
  finally{$('connectBtn').disabled=false;}
 });
 $('disconnectBtn').addEventListener('click',()=>{
- if(isUploading)return;
+ if(isUploading||isCompressing)return;
  workerUrl='';uploadKey='';queue=[];
  $('workerUrl').value='';$('uploadKey').value='';
  $('upload').classList.add('hidden');$('settings').classList.remove('hidden');

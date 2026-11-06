@@ -147,12 +147,14 @@ async function migrateLocalPlaylists(){
    if(!playlists.some(p=>p.id===shared.id))playlists.push(shared);
   }
   const validTracks=(old.tracks||[]).filter(path=>allTracks.some(track=>track.srcPath===path));
-  const additions=validTracks.filter(path=>!shared.tracks.includes(path));
-  if(additions.length){
-   const updated=await playlistRequest('PUT',{id:shared.id,addTracks:additions});
+  let additions=validTracks.filter(path=>!shared.tracks.includes(path));
+  while(additions.length){
+   const batch=additions.slice(0,200);
+   const updated=await playlistRequest('PUT',{id:shared.id,addTracks:batch});
    shared=updated.playlist;
    const index=playlists.findIndex(p=>p.id===shared.id);
    if(index>=0)playlists[index]=shared;else playlists.push(shared);
+   additions=additions.slice(batch.length);
   }
  }
  localStorage.setItem('player.sharedPlaylistsMigrated.v2','yes');
